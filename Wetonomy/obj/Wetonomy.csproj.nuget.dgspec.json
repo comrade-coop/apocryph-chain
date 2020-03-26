@@ -1,0 +1,272 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\Wetonomy\\Wetonomy.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\src\\Apocryph.FunctionApp\\Apocryph.FunctionApp.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\src\\Apocryph.FunctionApp\\Apocryph.FunctionApp.csproj",
+        "projectName": "Apocryph.FunctionApp",
+        "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\src\\Apocryph.FunctionApp\\Apocryph.FunctionApp.csproj",
+        "packagesPath": "C:\\Users\\ioan6\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\src\\Apocryph.FunctionApp\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\ioan6\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.1": {
+            "projectReferences": {
+              "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.WebJobs.Extensions\\Perper.WebJobs.Extensions.csproj": {
+                "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.WebJobs.Extensions\\Perper.WebJobs.Extensions.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "dependencies": {
+            "Ipfs.Http.Client": {
+              "target": "Package",
+              "version": "[0.33.0, )"
+            },
+            "Microsoft.NET.Sdk.Functions": {
+              "target": "Package",
+              "version": "[3.0.2, )"
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[12.0.2, )"
+            },
+            "System.Linq.Async": {
+              "target": "Package",
+              "version": "[4.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.101\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\Wetonomy\\Wetonomy.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\Wetonomy\\Wetonomy.csproj",
+        "projectName": "Wetonomy",
+        "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\Wetonomy\\Wetonomy.csproj",
+        "packagesPath": "C:\\Users\\ioan6\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\Wetonomy\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\ioan6\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.1": {
+            "projectReferences": {
+              "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\src\\Apocryph.FunctionApp\\Apocryph.FunctionApp.csproj": {
+                "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\apocryph\\src\\Apocryph.FunctionApp\\Apocryph.FunctionApp.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "dependencies": {
+            "Microsoft.NET.Sdk.Functions": {
+              "target": "Package",
+              "version": "[3.0.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.101\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.Protocol\\Perper.Protocol.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.Protocol\\Perper.Protocol.csproj",
+        "projectName": "Perper.Protocol",
+        "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.Protocol\\Perper.Protocol.csproj",
+        "packagesPath": "C:\\Users\\ioan6\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.Protocol\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\ioan6\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.1": {
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "dependencies": {
+            "Apache.Ignite": {
+              "target": "Package",
+              "version": "[2.8.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.101\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.WebJobs.Extensions\\Perper.WebJobs.Extensions.csproj": {
+      "version": "0.1.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.WebJobs.Extensions\\Perper.WebJobs.Extensions.csproj",
+        "projectName": "Perper.WebJobs.Extensions",
+        "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.WebJobs.Extensions\\Perper.WebJobs.Extensions.csproj",
+        "packagesPath": "C:\\Users\\ioan6\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.WebJobs.Extensions\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\ioan6\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.1": {
+            "projectReferences": {
+              "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.Protocol\\Perper.Protocol.csproj": {
+                "projectPath": "C:\\Users\\ioan6\\Desktop\\Projects\\perper\\src\\Perper.Protocol\\Perper.Protocol.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "dependencies": {
+            "Microsoft.Azure.WebJobs": {
+              "target": "Package",
+              "version": "[3.0.14, )"
+            },
+            "System.IO.Pipelines": {
+              "target": "Package",
+              "version": "[4.6.0, )"
+            },
+            "System.Threading.Channels": {
+              "target": "Package",
+              "version": "[4.7.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.101\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

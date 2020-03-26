@@ -1,27 +1,45 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.FunctionApp", "src\Apocryph.FunctionApp\Apocryph.FunctionApp.csproj", "{1E974229-9988-49F5-B9E7-0FF7BF869375}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Apocryph.FunctionApp", "src\Apocryph.FunctionApp\Apocryph.FunctionApp.csproj", "{1E974229-9988-49F5-B9E7-0FF7BF869375}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{236740A3-41C1-48DB-9C34-B82077F048BE}"
-ProjectSection(SolutionItems) = preProject
-	docker\Dockerfile = docker\Dockerfile
-	docker\docker-compose.yaml = docker\docker-compose.yaml
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		docker\docker-compose.yaml = docker\docker-compose.yaml
+		docker\Dockerfile = docker\Dockerfile
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wetonomy draft", "wetonomy draft", "{EDCB0FA5-72F1-4D06-A08F-72B6B787A6A3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Wetonomy", "Wetonomy\Wetonomy.csproj", "{5581B506-BDE7-4CA3-87C9-3806A557F680}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{1E974229-9988-49F5-B9E7-0FF7BF869375} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
-	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5581B506-BDE7-4CA3-87C9-3806A557F680}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5581B506-BDE7-4CA3-87C9-3806A557F680}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5581B506-BDE7-4CA3-87C9-3806A557F680}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5581B506-BDE7-4CA3-87C9-3806A557F680}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1E974229-9988-49F5-B9E7-0FF7BF869375} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
+		{5581B506-BDE7-4CA3-87C9-3806A557F680} = {EDCB0FA5-72F1-4D06-A08F-72B6B787A6A3}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DD5A66DD-C068-4B29-82A1-001FE4A2F4B7}
 	EndGlobalSection
 EndGlobal
