@@ -2,12 +2,16 @@ using System.Numerics;
 
 namespace Wetonomy.TokenManager.Publications
 {
-    public class StakePublication
+    public class TokenBurnPublication<T>
     {
-        public BigInteger Amount { get; set; }
+        public BigInteger Amount { get; }
 
-        public string From { get; set; }
+        public T From { get; }
 
-        public string To { get; set; }
+        public TokenBurnPublication(BigInteger amount, T from)
+        {
+            Amount = amount;
+            From = from;
+        }
     }
 }

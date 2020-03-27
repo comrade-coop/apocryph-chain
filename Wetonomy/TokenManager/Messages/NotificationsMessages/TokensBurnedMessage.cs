@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
-namespace Wetonomy.TokenManager.Messages
+namespace Wetonomy.TokenManager.Messages.NotificationsMessages
 {
-    class BurnTokenMessage<T>
+    public class TokensBurnedMessage<T>
     {
         public BigInteger Amount { get; }
         public T From { get; }
 
-        public BurnTokenMessage(BigInteger amount, T from)
+        public TokensBurnedMessage(BigInteger amount, T from)
         {
             Amount = amount;
             From = from;

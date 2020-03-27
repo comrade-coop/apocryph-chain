@@ -1,9 +1,9 @@
 using Apocryph.FunctionApp.Agent;
-using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 using Wetonomy.TokenManager.Messages;
+using Wetonomy.TokenManager.Messages.NotificationsMessages;
+using Wetonomy.TokenManager.Publications;
 
 namespace Wetonomy.TokenManager
 {
@@ -68,15 +68,35 @@ namespace Wetonomy.TokenManager
             switch (message)
             {
                 case BurnTokenMessage<T> burnTokenMessage:
-                    context.State.Burn(burnTokenMessage.Amount, burnTokenMessage.From);
+                    if(context.State.Burn(burnTokenMessage.Amount, burnTokenMessage.From))
+                    {
+                        context.SendMessage(null, new TokensBurnedMessage<T>(burnTokenMessage.Amount, burnTokenMessage.From), null);
+                        context.MakePublication(
+                            new TokenBurnPublication<T>(burnTokenMessage.Amount, burnTokenMessage.From)
+                        );
+                    }
                     break;
 
                 case MintTokenMessage<T> mintTokenMessage:
-                    context.State.Mint(mintTokenMessage.Amount, mintTokenMessage.To);
+                    
+                    if (context.State.Mint(mintTokenMessage.Amount, mintTokenMessage.To))
+                    {
+                        context.SendMessage(null, new TokensMintedMessage<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);
+                        context.MakePublication(
+                            new TokenMintPublication<T>(mintTokenMessage.Amount, mintTokenMessage.To)
+                        );
+                    }
                     break;
 
                 case TransferTokenMessage<T> transferTokenMessage:
-                    context.State.Transfer(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To);
+                    if (context.State.Transfer(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To))
+                    {
+
+                        context.SendMessage(null, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+                        context.MakePublication(
+                            new TokenTransferPublication<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To)
+                        );
+                    }
                     break;
             }
         }

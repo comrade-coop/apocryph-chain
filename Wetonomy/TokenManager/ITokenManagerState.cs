@@ -2,7 +2,8 @@ using System.Numerics;
 
 namespace Wetonomy.TokenManager
 {
-    //We need generic type T because token manager can support Tags
+    // We need generic type T because token manager can support Tags
+    // Example Tuple(address: string, date: DateTime)
     public interface ITokenManagerState<T>
     {
         public bool Mint(BigInteger amount, T to);

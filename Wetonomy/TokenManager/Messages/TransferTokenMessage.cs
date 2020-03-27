@@ -5,13 +5,13 @@ using System.Text;
 
 namespace Wetonomy.TokenManager.Messages
 {
-    class TransferTokenMessage
+    class TransferTokenMessage<T>
     {
         public BigInteger Amount { get; }
-        public string From { get; }
-        public string To { get; }
+        public T From { get; }
+        public T To { get; }
 
-        public TransferTokenMessage(BigInteger amount, string from, string to)
+        public TransferTokenMessage(BigInteger amount, T from, T to)
         {
             Amount = amount;
             From = from;

@@ -1,16 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Apocryph.FunctionApp.Model;
+using System.Text;
 
-namespace Wetonomy.TokenManager.Publications
+namespace Wetonomy.TokenManager.Messages.NotificationsMessages
 {
-    public class TokenMintPublication<T>
+    public class TokensMintedMessage<T>
     {
         public BigInteger Amount { get; }
 
         public T To { get; }
 
-        public TokenMintPublication(BigInteger amount, T to)
+        public TokensMintedMessage(BigInteger amount, T to)
         {
             Amount = amount;
             To = to;
