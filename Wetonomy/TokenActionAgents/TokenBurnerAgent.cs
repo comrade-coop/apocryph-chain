@@ -2,11 +2,9 @@ using Apocryph.FunctionApp.Agent;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 using Wetonomy.State.TokenActionAgents;
 using Wetonomy.TokenActionAgents.Messages;
 using Wetonomy.TokenActionAgents.Publications;
-using Wetonomy.TokenActionAgents.Strategies;
 using Wetonomy.TokenManager.Messages;
 using Wetonomy.TokenManager.Messages.NotificationsMessages;
 using System.Linq;
@@ -17,19 +15,12 @@ namespace Wetonomy.TokenActionAgents
     {
         public class TokenBurnerState: RecipientState<T>
         {
-            public IBurnTokensStrategy<T> BurnStrategy;
-
             public HashSet<TokensTransferedMessage<T>> TransferMessages = new HashSet<TokensTransferedMessage<T>>();
-
-            public IList<object> Burn(BigInteger amount)
-            {
-                return BurnStrategy.Burn(Recipients, amount, TokenManager);
-            }
 
             public bool GetTokens(T from, BigInteger amount, out T sender)
             {
-                sender = default(T);
-                TokensTransferedMessage<T> element = TransferMessages.FirstOrDefault(x=> x.From.Equals(from) && x.Amount == amount);
+                sender = default;
+                TokensTransferedMessage<T> element = TransferMessages.FirstOrDefault(x => x.From.Equals(from) && x.Amount == amount);
                 if (element == null) return false;
                 BigInteger current = element.Amount;
                 if (current > amount)
@@ -53,20 +44,20 @@ namespace Wetonomy.TokenActionAgents
 
         public static void Run(IAgentContext<TokenBurnerState> context, string sender, object message)
         {
-            switch (message)
+            if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))
             {
-                case AbstractTriggerer triggerer:
-                    Type triggererType = triggerer.GetType();
-                    if (triggererType.IsAssignableFrom(context.State.Triggerer))
-                    {
-                        IList<object> result = context.State.Burn(triggerer.Amount);
-                        foreach(var action in result)
-                        {
-                            context.SendMessage(null, action, null);
-                        }
-                    }
-                    break;
+                var result = RecipientState<T>.TriggerCheck(context, sender, msg);
 
+                foreach (BurnTokenMessage<T> action in result)
+                {
+                    context.SendMessage(null, action, null);
+                }
+
+                return;
+            }
+
+            switch(message)
+            {
                 case TokensTransferedMessage<T> transferedMessage:
                     if (context.State.AddRecipient(transferedMessage.From))
                     {
@@ -85,5 +76,6 @@ namespace Wetonomy.TokenActionAgents
                     break;
             }
         }
+
     }
 }

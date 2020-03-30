@@ -71,6 +71,7 @@ namespace Wetonomy.TokenManager
                     if(context.State.Burn(burnTokenMessage.Amount, burnTokenMessage.From))
                     {
                         context.SendMessage(null, new TokensBurnedMessage<T>(burnTokenMessage.Amount, burnTokenMessage.From), null);
+
                         context.MakePublication(
                             new TokenBurnPublication<T>(burnTokenMessage.Amount, burnTokenMessage.From)
                         );
@@ -82,6 +83,7 @@ namespace Wetonomy.TokenManager
                     if (context.State.Mint(mintTokenMessage.Amount, mintTokenMessage.To))
                     {
                         context.SendMessage(null, new TokensMintedMessage<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);
+
                         context.MakePublication(
                             new TokenMintPublication<T>(mintTokenMessage.Amount, mintTokenMessage.To)
                         );
@@ -93,6 +95,8 @@ namespace Wetonomy.TokenManager
                     {
 
                         context.SendMessage(null, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+                        context.SendMessage(null, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+
                         context.MakePublication(
                             new TokenTransferPublication<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To)
                         );
