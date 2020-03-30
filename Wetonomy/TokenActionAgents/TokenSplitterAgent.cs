@@ -16,7 +16,7 @@ namespace Wetonomy.TokenActionAgents
 
             if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))
             {
-                var result = RecipientState<T>.TriggerCheck(context, sender, msg);
+                var result = RecipientState<T>.TriggerCheck(context.State, sender, msg);
 
                 foreach (TransferTokenMessage<T> action in result)
                 {

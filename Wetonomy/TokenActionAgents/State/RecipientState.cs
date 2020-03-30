@@ -11,7 +11,7 @@ namespace Wetonomy.State.TokenActionAgents
         //Capability
         public string TokenManagerAgent;
 
-        public Dictionary<(string, Type), Func<IAgentContext<RecipientState<T>>, AbstractTriggerer, IList<object>>> TriggererToAction;
+        public Dictionary<(string, Type), Func<RecipientState<T>, AbstractTriggerer, IList<object>>> TriggererToAction;
 
         public List<T> Recipients = new List<T>();
 
@@ -32,11 +32,11 @@ namespace Wetonomy.State.TokenActionAgents
         }
 
 
-        public static IList<object> TriggerCheck(IAgentContext<RecipientState<T>> context, string sender, AbstractTriggerer message)
+        public static IList<object> TriggerCheck(RecipientState<T> state, string sender, AbstractTriggerer message)
         {
-            Func<IAgentContext<RecipientState<T>>, AbstractTriggerer, IList<object>> func = context.State.TriggererToAction[(sender, message.GetType())];
+            Func<RecipientState<T>, AbstractTriggerer, IList<object>> func = state.TriggererToAction[(sender, message.GetType())];
 
-            IList<object> result = func.Invoke(context, message);
+            IList<object> result = func.Invoke(state, message);
 
             return result;
 
