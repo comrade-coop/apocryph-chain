@@ -36,7 +36,7 @@ namespace Wetonomy.TokenManager
             public bool Mint(BigInteger amount, T to)
             {
                 if (TokenBalances.ContainsKey(to)) TokenBalances[to] += amount;
-                
+
                 else TokenBalances.Add(to, amount);
 
                 TotalBalance += amount;
@@ -68,8 +68,17 @@ namespace Wetonomy.TokenManager
             var context = new AgentContext<TokenManagerState>(state as TokenManagerState);
             switch (message)
             {
-                case InitMessage initMessage:
-                    context.IssueCapability(sender, new string[] { nameof(BurnTokenMessage<T>), nameof(MintTokenMessage<T>), nameof(TransferTokenMessage<T>) }, null);
+                case TokenManagerInitMessage tokenManagerInitMessage:
+                    var distributeCapabilityMessage = new Program.DistributeTokenManagerCapabilitiesMessage
+                    {
+                        TokenManagerCapability = context.IssueCapability(new[]
+                        {
+                            nameof(BurnTokenMessage<T>),
+                            nameof(MintTokenMessage<T>),
+                            nameof(TransferTokenMessage<T>)
+                        })
+                    };
+                    context.SendMessage(tokenManagerInitMessage.OrganizationAgentCapability, distributeCapabilityMessage, null);
                     break;
                 case BurnTokenMessage<T> burnTokenMessage:
                     if(context.State.Burn(burnTokenMessage.Amount, burnTokenMessage.From))
@@ -83,7 +92,7 @@ namespace Wetonomy.TokenManager
                     break;
 
                 case MintTokenMessage<T> mintTokenMessage:
-                    
+
                     if (context.State.Mint(mintTokenMessage.Amount, mintTokenMessage.To))
                     {
                         context.SendMessage(mintTokenMessage.To as AgentCapability, new TokensMintedMessage<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);

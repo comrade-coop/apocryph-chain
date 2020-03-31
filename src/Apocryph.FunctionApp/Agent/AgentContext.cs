@@ -15,8 +15,22 @@ namespace Apocryph.FunctionApp.Agent
 
         public T State { get; }
 
+        public AgentCapability IssueCapability(string[] messageTypes)
+        {
+            throw new NotImplementedException();
+        }
 
-        public void RequestCallTicket(AgentCapability agent)
+        public void RevokeCapability(AgentCapability capability)
+        {
+            throw new NotImplementedException();
+        }
+
+        public AgentCallTicket RequestCallTicket(AgentCapability agent)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CreateAgent(string id, string functionName, object initMessage, AgentCallTicket callTicket)
         {
             throw new NotImplementedException();
         }
@@ -25,16 +39,6 @@ namespace Apocryph.FunctionApp.Agent
         {
             // HACK: Should add actual Capability support in the Runtime
             Commands.Add(new SendMessageCommand{Target = receiver.AgentId, Payload = message});
-        }
-
-        public void IssueCapability(AgentCapability receiver, string[] messageTypes, AgentCallTicket callTicket)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void RevokeCapability(AgentCapability agent)
-        {
-            throw new NotImplementedException();
         }
 
         public void AddReminder(TimeSpan time, object data)
@@ -55,11 +59,6 @@ namespace Apocryph.FunctionApp.Agent
         public void SendServiceMessage(string service, object parameters)
         {
             Commands.Add(new ServiceCommand{Service = service, Parameters = parameters});
-        }
-
-        public void CreateAgent(string id, string functionName, string[] messageTypes, AgentCallTicket callTicket)
-        {
-            throw new NotImplementedException();
         }
     }
 }

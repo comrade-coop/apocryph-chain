@@ -12,7 +12,7 @@ namespace Wetonomy.TokenActionAgents
 {
     class TokenBurnerAgent<T> where T : IEquatable<T>
     {
-        
+
 
         public static void Run(IAgentContext<TokenBurnerState<T>> context, string sender, object message)
         {
@@ -30,7 +30,8 @@ namespace Wetonomy.TokenActionAgents
 
             switch(message)
             {
-                case InitMessage initMessage:
+                case TokenActionAgentInitMessage organizationInitMessage:
+                    context.State.TokenManagerAgent = organizationInitMessage.TokenManagerAgentCapability;
                     break;
                 case TokensTransferedMessage<T> transferedMessage:
                     if (context.State.AddRecipient(transferedMessage.From))

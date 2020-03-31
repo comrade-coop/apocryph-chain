@@ -35,7 +35,8 @@ namespace Wetonomy.TokenActionAgents
 
             switch (message)
             {
-                case InitMessage initMessage:
+                case TokenActionAgentInitMessage organizationInitMessage:
+                    context.State.TokenManagerAgent = organizationInitMessage.TokenManagerAgentCapability;
                     break;
                 case AddRecipientMessage<T> addMessage:
                     if (context.State.AddRecipient(addMessage.Recipient))
