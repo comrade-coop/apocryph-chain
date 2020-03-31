@@ -56,5 +56,10 @@ namespace Apocryph.FunctionApp.Agent
         {
             Commands.Add(new ServiceCommand{Service = service, Parameters = parameters});
         }
+
+        public void CreateAgent(string id, string functionName, string[] messageTypes, AgentCallTicket callTicket)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

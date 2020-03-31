@@ -9,7 +9,7 @@ namespace Wetonomy.TokenActionAgents.State
     public class RecipientState<T> where T: IEquatable<T>
     {
         //Capability
-        public string TokenManagerAgent;
+        public AgentCapability TokenManagerAgent;
 
         public Dictionary<(string, Type), Func<RecipientState<T>, AbstractTriggerer, IList<object>>> TriggererToAction;
 

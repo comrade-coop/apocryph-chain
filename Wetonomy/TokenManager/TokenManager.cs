@@ -7,7 +7,7 @@ using Wetonomy.TokenManager.Publications;
 
 namespace Wetonomy.TokenManager
 {
-    public static class TokenManager<T>
+    public class TokenManager<T> where T : class
     {
         public class TokenManagerState: ITokenManagerState<T>
         {
@@ -63,14 +63,18 @@ namespace Wetonomy.TokenManager
             }
         }
 
-        public static void Run(IAgentContext<TokenManagerState> context, string sender, object message)
+        public static AgentContext<TokenManagerState> Run(object state, AgentCapability sender, object message)
         {
+            var context = new AgentContext<TokenManagerState>(state as TokenManagerState);
             switch (message)
             {
+                case InitMessage initMessage:
+                    context.IssueCapability(sender, new string[] { nameof(BurnTokenMessage<T>), nameof(MintTokenMessage<T>), nameof(TransferTokenMessage<T>) }, null);
+                    break;
                 case BurnTokenMessage<T> burnTokenMessage:
                     if(context.State.Burn(burnTokenMessage.Amount, burnTokenMessage.From))
                     {
-                        context.SendMessage(null, new TokensBurnedMessage<T>(burnTokenMessage.Amount, burnTokenMessage.From), null);
+                        context.SendMessage(burnTokenMessage.From as AgentCapability, new TokensBurnedMessage<T>(burnTokenMessage.Amount, burnTokenMessage.From), null);
 
                         context.MakePublication(
                             new TokenBurnPublication<T>(burnTokenMessage.Amount, burnTokenMessage.From)
@@ -82,7 +86,7 @@ namespace Wetonomy.TokenManager
                     
                     if (context.State.Mint(mintTokenMessage.Amount, mintTokenMessage.To))
                     {
-                        context.SendMessage(null, new TokensMintedMessage<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);
+                        context.SendMessage(mintTokenMessage.To as AgentCapability, new TokensMintedMessage<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);
 
                         context.MakePublication(
                             new TokenMintPublication<T>(mintTokenMessage.Amount, mintTokenMessage.To)
@@ -94,8 +98,8 @@ namespace Wetonomy.TokenManager
                     if (context.State.Transfer(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To))
                     {
 
-                        context.SendMessage(null, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
-                        context.SendMessage(null, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+                        context.SendMessage(transferTokenMessage.From as AgentCapability, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+                        context.SendMessage(transferTokenMessage.To as AgentCapability, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
 
                         context.MakePublication(
                             new TokenTransferPublication<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To)
@@ -103,6 +107,7 @@ namespace Wetonomy.TokenManager
                     }
                     break;
             }
+            return context;
         }
     }
 }

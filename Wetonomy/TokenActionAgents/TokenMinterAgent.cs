@@ -1,6 +1,7 @@
 using Apocryph.FunctionApp.Agent;
 using System;
 using Wetonomy.TokenActionAgents.Messages;
+using Wetonomy.TokenActionAgents.Messages.Notifications;
 using Wetonomy.TokenActionAgents.Publications;
 using Wetonomy.TokenActionAgents.State;
 using Wetonomy.TokenManager.Messages;
@@ -16,9 +17,17 @@ namespace Wetonomy.TokenActionAgents
             {
                 var result = RecipientState<T>.TriggerCheck(context.State, sender, msg);
 
-                foreach (MintTokenMessage<T> action in result)
+                foreach (var action in result)
                 {
-                    context.SendMessage(null, action, null);
+                    if(action is MintTokenMessage<T> mintMsg)
+                    {
+                        context.SendMessage(context.State.TokenManagerAgent, action, null);
+                    }
+                    //Publication
+                    //if(action is TokensMintedTriggerer<T> trigger)
+                    //{
+                    //    context.SendMessage(context.State.TokenManagerAgent, action, null);
+                    //}
                 }
 
                 return;
@@ -26,6 +35,8 @@ namespace Wetonomy.TokenActionAgents
 
             switch (message)
             {
+                case InitMessage initMessage:
+                    break;
                 case AddRecipientMessage<T> addMessage:
                     if (context.State.AddRecipient(addMessage.Recipient))
                     {

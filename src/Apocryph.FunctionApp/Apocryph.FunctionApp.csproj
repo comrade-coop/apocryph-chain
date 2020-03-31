@@ -21,6 +21,6 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="../../../perper/src/Perper.WebJobs.Extensions\Perper.WebJobs.Extensions.csproj" />
+      <ProjectReference Include="..\..\..\perper\src\Perper.WebJobs.Extensions\Perper.WebJobs.Extensions.csproj" />
     </ItemGroup>
 </Project>

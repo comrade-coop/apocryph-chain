@@ -18,7 +18,7 @@ namespace Wetonomy.TokenActionAgents
 
                 foreach (TransferTokenMessage<T> action in result)
                 {
-                    context.SendMessage(null, action, null);
+                    context.SendMessage(context.State.TokenManagerAgent, action, null);
                 }
 
                 return;
@@ -26,6 +26,10 @@ namespace Wetonomy.TokenActionAgents
 
             switch (message)
             {
+                case InitMessage initMessage:
+                    //context.State.TokenManagerAgent
+                    break;
+
                 case AddRecipientMessage<T> addMessage:
                     if (context.State.AddRecipient(addMessage.Recipient))
                     {
