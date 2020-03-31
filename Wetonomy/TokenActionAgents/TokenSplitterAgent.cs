@@ -1,17 +1,15 @@
 using Apocryph.FunctionApp.Agent;
 using System;
-using Wetonomy.State.TokenActionAgents;
 using Wetonomy.TokenActionAgents.Messages;
 using Wetonomy.TokenActionAgents.Publications;
+using Wetonomy.TokenActionAgents.State;
 using Wetonomy.TokenManager.Messages;
 
 namespace Wetonomy.TokenActionAgents
 {
     class TokenSplitterAgent<T> where T: IEquatable<T>
     {
-        public class TokenSolitterState : RecipientState<T>
-        {}
-        public static void Run(IAgentContext<TokenSolitterState> context, string sender, object message)
+        public static void Run(IAgentContext<RecipientState<T>> context, string sender, object message)
         {
 
             if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))

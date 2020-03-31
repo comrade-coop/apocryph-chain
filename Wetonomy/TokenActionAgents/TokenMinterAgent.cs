@@ -1,23 +1,20 @@
 using Apocryph.FunctionApp.Agent;
 using System;
-using Wetonomy.State.TokenActionAgents;
 using Wetonomy.TokenActionAgents.Messages;
 using Wetonomy.TokenActionAgents.Publications;
+using Wetonomy.TokenActionAgents.State;
 using Wetonomy.TokenManager.Messages;
 
 namespace Wetonomy.TokenActionAgents
 {
     class TokenMinterAgent<T> where T: IEquatable<T>
     {
-        public class TokenMinterState: RecipientState<T>
-        {}
-
-        public static void Run(IAgentContext<TokenMinterState> context, string sender, object message)
+        public static void Run(IAgentContext<RecipientState<T>> context, string sender, object message)
         {
 
             if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))
             {
-                var result = RecipientState<T>.TriggerCheck(context, sender, msg);
+                var result = RecipientState<T>.TriggerCheck(context.State, sender, msg);
 
                 foreach (MintTokenMessage<T> action in result)
                 {

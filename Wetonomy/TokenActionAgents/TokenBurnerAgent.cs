@@ -1,52 +1,24 @@
 using Apocryph.FunctionApp.Agent;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using Wetonomy.State.TokenActionAgents;
 using Wetonomy.TokenActionAgents.Messages;
 using Wetonomy.TokenActionAgents.Publications;
 using Wetonomy.TokenManager.Messages;
 using Wetonomy.TokenManager.Messages.NotificationsMessages;
 using System.Linq;
+using Wetonomy.TokenActionAgents.State;
+using Wetonomy.TokenActionAgents.Functions;
 
 namespace Wetonomy.TokenActionAgents
 {
     class TokenBurnerAgent<T> where T : IEquatable<T>
     {
-        public class TokenBurnerState: RecipientState<T>
-        {
-            public HashSet<TokensTransferedMessage<T>> TransferMessages = new HashSet<TokensTransferedMessage<T>>();
+        
 
-            public bool GetTokens(T from, BigInteger amount, out T sender)
-            {
-                sender = default;
-                TokensTransferedMessage<T> element = TransferMessages.FirstOrDefault(x => x.From.Equals(from) && x.Amount == amount);
-                if (element == null) return false;
-                BigInteger current = element.Amount;
-                if (current > amount)
-                {
-                    //Not sure if we need this scenario
-                    var newTokensMsg = new TokensTransferedMessage<T>(element.Amount, element.From, element.To);
-                    sender = element.To;
-                    TransferMessages.Add(newTokensMsg);
-                    TransferMessages.Remove(element);
-                    return true;
-                }
-                if (current == amount)
-                {
-                    sender = element.To;
-                    TransferMessages.Remove(element);
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        public static void Run(IAgentContext<TokenBurnerState> context, string sender, object message)
+        public static void Run(IAgentContext<TokenBurnerState<T>> context, string sender, object message)
         {
             if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))
             {
-                var result = RecipientState<T>.TriggerCheck(context, sender, msg);
+                var result = RecipientState<T>.TriggerCheck(context.State, sender, msg);
 
                 foreach (BurnTokenMessage<T> action in result)
                 {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Wetonomy.TokenActionAgents.Messages;
 
-namespace Wetonomy.State.TokenActionAgents
+namespace Wetonomy.TokenActionAgents.State
 {
     public class RecipientState<T> where T: IEquatable<T>
     {
