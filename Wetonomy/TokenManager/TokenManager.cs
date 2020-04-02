@@ -84,7 +84,7 @@ namespace Wetonomy.TokenManager
                 case BurnTokenMessage<T> burnTokenMessage:
                     if(context.State.Burn(burnTokenMessage.Amount, burnTokenMessage.From))
                     {
-                        context.SendMessage(burnTokenMessage.From as AgentCapability, new TokensBurnedMessage<T>(burnTokenMessage.Amount, burnTokenMessage.From), null);
+                        context.SendMessage(burnTokenMessage.From as AgentCapability, new TokensBurnedNotification<T>(burnTokenMessage.Amount, burnTokenMessage.From), null);
 
                         context.MakePublication(
                             new TokenBurnPublication<T>(burnTokenMessage.Amount, burnTokenMessage.From)
@@ -96,7 +96,7 @@ namespace Wetonomy.TokenManager
 
                     if (context.State.Mint(mintTokenMessage.Amount, mintTokenMessage.To))
                     {
-                        context.SendMessage(mintTokenMessage.To as AgentCapability, new TokensMintedMessage<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);
+                        context.SendMessage(mintTokenMessage.To as AgentCapability, new TokensMintedNotification<T>(mintTokenMessage.Amount, mintTokenMessage.To), null);
 
                         context.MakePublication(
                             new TokenMintPublication<T>(mintTokenMessage.Amount, mintTokenMessage.To)
@@ -108,8 +108,8 @@ namespace Wetonomy.TokenManager
                     if (context.State.Transfer(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To))
                     {
 
-                        context.SendMessage(transferTokenMessage.From as AgentCapability, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
-                        context.SendMessage(transferTokenMessage.To as AgentCapability, new TokensTransferedMessage<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+                        context.SendMessage(transferTokenMessage.From as AgentCapability, new TokensTransferedNotification<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
+                        context.SendMessage(transferTokenMessage.To as AgentCapability, new TokensTransferedNotification<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To), null);
 
                         context.MakePublication(
                             new TokenTransferPublication<T>(transferTokenMessage.Amount, transferTokenMessage.From, transferTokenMessage.To)

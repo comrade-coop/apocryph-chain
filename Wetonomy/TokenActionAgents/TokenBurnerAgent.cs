@@ -34,7 +34,7 @@ namespace Wetonomy.TokenActionAgents
                     context.State.TokenManagerAgent = organizationInitMessage.TokenManagerAgentCapability;
                     context.State.TriggererToAction = organizationInitMessage.TriggererToAction;
                     break;
-                case TokensTransferedMessage<T> transferedMessage:
+                case TokensTransferedNotification<T> transferedMessage:
                     if (context.State.AddRecipient(transferedMessage.From))
                     {
                         context.State.TransferMessages.Add(transferedMessage);

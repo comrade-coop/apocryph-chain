@@ -5,15 +5,16 @@ using System.Text;
 
 namespace Wetonomy.TokenManager.Messages.NotificationsMessages
 {
-    public class TokensBurnedMessage<T>
+    public class TokensMintedNotification<T> : AbstractTriggerer
     {
         public BigInteger Amount { get; }
-        public T From { get; }
 
-        public TokensBurnedMessage(BigInteger amount, T from)
+        public T To { get; }
+
+        public TokensMintedNotification(BigInteger amount, T to)
         {
             Amount = amount;
-            From = from;
+            To = to;
         }
     }
 }

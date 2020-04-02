@@ -70,7 +70,7 @@ namespace Wetonomy
                                     splitCapability,
                                     new Dictionary<(string, Type), TriggerMessage<AgentCapability>>()
                                     {
-                                        { ("cashTokenManager", typeof(TokensTransferedMessage<AgentCapability>)), TokenSplitterFunctions<AgentCapability>.UniformSplitter}
+                                        { ("cashTokenManager", typeof(TokensTransferedNotification<AgentCapability>)), TokenSplitterFunctions<AgentCapability>.UniformSplitter}
                                     });
                                 context.CreateAgent("cashTokenSplitter", nameof(TokenSplitterAgent<AgentCapability>), tokenSplitterAgent, null);
 
@@ -80,7 +80,7 @@ namespace Wetonomy
                                     burnCapability,
                                     new Dictionary<(string, Type), TriggerMessage<AgentCapability>>()
                                     {
-                                        { ("cashTokenManager", typeof(TokensTransferedMessage<AgentCapability>)), TokenBurnerFunctions<AgentCapability>.SelfBurn}
+                                        { ("cashTokenManager", typeof(TokensTransferedNotification<AgentCapability>)), TokenBurnerFunctions<AgentCapability>.SelfBurn}
                                     });
                                 context.CreateAgent("cashTokenBurnerForDebt", nameof(TokenBurnerAgent<AgentCapability>), cashTokenBurnerForDebt, null);
 
@@ -89,7 +89,7 @@ namespace Wetonomy
                                     burnCapability,
                                     new Dictionary<(string, Type), TriggerMessage<AgentCapability>>()
                                     {
-                                        { ("cashTokenManager", typeof(TokensTransferedMessage<AgentCapability>)), TokenBurnerFunctions<AgentCapability>.SelfBurn}
+                                        { ("cashTokenManager", typeof(TokensTransferedNotification<AgentCapability>)), TokenBurnerFunctions<AgentCapability>.SelfBurn}
                                     });
                                 context.CreateAgent("cashTokenBurnerForAllowance", nameof(TokenBurnerAgent<AgentCapability>), cashTokenBurnerForDebt, null);
                                 break;
@@ -100,7 +100,7 @@ namespace Wetonomy
                                     debtBurnCapability,
                                     new Dictionary<(string, Type), TriggerMessage<AgentCapability>>()
                                     {
-                                        { ("debtTokenManager" ,typeof(TokensBurnedTriggerer<AgentCapability>)), TokenMinterFunctions<AgentCapability>.SingleMintAfterBurn}
+                                        { ("cashTokenBurnerForDebt" ,typeof(TokensBurnedTriggerer<AgentCapability>)), TokenMinterFunctions<AgentCapability>.SingleMintAfterBurn}
                                     });
                                 context.CreateAgent("debtTokenBurner", nameof(TokenBurnerAgent<AgentCapability>), debtTokenBurner, null);
                                 break;
@@ -111,7 +111,7 @@ namespace Wetonomy
                                     allowanceBurnCapability,
                                     new Dictionary<(string, Type), TriggerMessage<AgentCapability>>()
                                     {
-                                        { ("allowanceTokenBurner" ,typeof(TokensBurnedTriggerer<AgentCapability>)), TokenMinterFunctions<AgentCapability>.SingleMintAfterBurn}
+                                        { ("cashTokenBurnerForAllowance" ,typeof(TokensBurnedTriggerer<AgentCapability>)), TokenMinterFunctions<AgentCapability>.SingleMintAfterBurn}
                                     });
                                 context.CreateAgent("allowanceTokenBurner", nameof(TokenBurnerAgent<AgentCapability>), allowanceTokenBurner, null);
                                 break;

@@ -9,18 +9,18 @@ namespace Wetonomy.TokenActionAgents.State
 {
     public class TokenBurnerState<T> : RecipientState<T> where T : IEquatable<T>
     {
-        public HashSet<TokensTransferedMessage<T>> TransferMessages = new HashSet<TokensTransferedMessage<T>>();
+        public HashSet<TokensTransferedNotification<T>> TransferMessages = new HashSet<TokensTransferedNotification<T>>();
 
         public bool GetTokens(T from, BigInteger amount, out T sender)
         {
             sender = default;
-            TokensTransferedMessage<T> element = TransferMessages.FirstOrDefault(x => x.From.Equals(from) && x.Amount == amount);
+            TokensTransferedNotification<T> element = TransferMessages.FirstOrDefault(x => x.From.Equals(from) && x.Amount == amount);
             if (element == null) return false;
             BigInteger current = element.Amount;
             if (current > amount)
             {
                 //Not sure if we need this scenario
-                var newTokensMsg = new TokensTransferedMessage<T>(element.Amount, element.From, element.To);
+                var newTokensMsg = new TokensTransferedNotification<T>(element.Amount, element.From, element.To);
                 sender = element.To;
                 TransferMessages.Add(newTokensMsg);
                 TransferMessages.Remove(element);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Wetonomy.TokenActionAgents.State;
-using Wetonomy.TokenActionAgents.Messages;
 using Wetonomy.TokenManager.Messages;
 using Wetonomy.TokenManager.Messages.NotificationsMessages;
 using System.Numerics;
@@ -14,7 +13,7 @@ namespace Wetonomy.TokenActionAgents.Functions
     {
         public static IList<object> SelfBurn(RecipientState<T> _, AbstractTriggerer message)
         {
-            if(message is TokensTransferedMessage<T> msg)
+            if(message is TokensTransferedNotification<T> msg)
             {
                 var command = new BurnTokenMessage<T>(msg.Amount, msg.To);
                 return new List<object>() { command };
@@ -31,7 +30,7 @@ namespace Wetonomy.TokenActionAgents.Functions
                 while(amount > 0)
                 {
                     T recipient = state.Recipients.First();
-                    TokensTransferedMessage<T> element = burnerState.TransferMessages.FirstOrDefault(x => x.From.Equals(recipient));
+                    TokensTransferedNotification<T> element = burnerState.TransferMessages.FirstOrDefault(x => x.From.Equals(recipient));
                     BigInteger debt = element.Amount;
                     T sender = element.To;
                     if( debt <= amount)

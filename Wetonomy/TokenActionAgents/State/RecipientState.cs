@@ -1,8 +1,7 @@
 using Apocryph.FunctionApp.Agent;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Wetonomy.TokenActionAgents.Messages;
+using Wetonomy.TokenManager.Messages;
 
 namespace Wetonomy.TokenActionAgents.State
 {

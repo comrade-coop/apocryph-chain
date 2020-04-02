@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
-namespace Wetonomy.TokenActionAgents.Messages
+namespace Wetonomy.TokenManager.Messages
 {
     public abstract class AbstractTriggerer
     {
