@@ -71,13 +71,14 @@ namespace Wetonomy.TokenManager
                 case TokenManagerInitMessage tokenManagerInitMessage:
                     var distributeCapabilityMessage = new Program.DistributeTokenManagerCapabilitiesMessage
                     {
-                        TokenManagerCapability = context.IssueCapability(new[]
-                        {
-                            nameof(BurnTokenMessage<T>),
-                            nameof(MintTokenMessage<T>),
-                            nameof(TransferTokenMessage<T>)
-                        })
+                        Id = tokenManagerInitMessage.Id,
+                        TokenManagerCapabilities = new Dictionary<string, AgentCapability>() {
+                            {"BurnTokenMessage", context.IssueCapability(new[]{ nameof(BurnTokenMessage<T>) }) },
+                            {"MintTokenMessage", context.IssueCapability(new[]{ nameof(MintTokenMessage<T>) }) },
+                            {"TransferTokenMessage", context.IssueCapability(new[]{ nameof(TransferTokenMessage<T>) }) },
+                        }
                     };
+
                     context.SendMessage(tokenManagerInitMessage.OrganizationAgentCapability, distributeCapabilityMessage, null);
                     break;
                 case BurnTokenMessage<T> burnTokenMessage:

@@ -10,12 +10,13 @@ namespace Wetonomy.TokenActionAgents
 {
     class TokenMinterAgent<T> where T: IEquatable<T>
     {
-        public static void Run(IAgentContext<RecipientState<T>> context, string sender, object message)
+        public static AgentContext<RecipientState<T>> Run(object state, AgentCapability sender, object message)
         {
+            var context = new AgentContext<RecipientState<T>>(state as RecipientState<T>);
 
-            if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))
+            if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender.AgentId, message.GetType())))
             {
-                var result = RecipientState<T>.TriggerCheck(context.State, sender, msg);
+                var result = RecipientState<T>.TriggerCheck(context.State, sender.AgentId, msg);
 
                 foreach (var action in result)
                 {
@@ -30,13 +31,14 @@ namespace Wetonomy.TokenActionAgents
                     //}
                 }
 
-                return;
+                return context;
             }
 
             switch (message)
             {
-                case TokenActionAgentInitMessage organizationInitMessage:
+                case TokenActionAgentInitMessage<T> organizationInitMessage:
                     context.State.TokenManagerAgent = organizationInitMessage.TokenManagerAgentCapability;
+                    context.State.TriggererToAction = organizationInitMessage.TriggererToAction;
                     break;
                 case AddRecipientMessage<T> addMessage:
                     if (context.State.AddRecipient(addMessage.Recipient))
@@ -52,6 +54,8 @@ namespace Wetonomy.TokenActionAgents
                     }
                     break;
             }
+
+            return context;
         }
     }
 }

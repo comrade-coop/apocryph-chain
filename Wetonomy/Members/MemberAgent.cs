@@ -13,8 +13,9 @@ namespace Wetonomy.Members
             public Dictionary<object, AgentCapability> Capabilities = new Dictionary<object, AgentCapability>();
         }
 
-        public static void Run(IAgentContext<MemberState> context, string sender, object message)
+        public static AgentContext<MemberState> Run(IAgentContext<MemberState> state, string sender, object message)
         {
+            var context = new AgentContext<MemberState>(state as MemberState);
             switch (message)
             {
                 case AddGroupMessage addGroupMessage:
@@ -27,6 +28,8 @@ namespace Wetonomy.Members
                     
                     break;
             }
+
+            return context;
         }
     }
 }

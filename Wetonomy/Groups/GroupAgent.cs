@@ -15,8 +15,10 @@ namespace Wetonomy.Groups
             public HashSet<AgentCapability> Capabilities = new HashSet<AgentCapability>();
         }
 
-        public static void Run(IAgentContext<GroupState> context, string sender, object message)
+        public static AgentContext<GroupState> Run(object state, string sender, object message)
         {
+            var context = new AgentContext<GroupState>(state as GroupState);
+
             switch (message)
             {
                 case AddMemberMessage addMemberMessage:
@@ -29,6 +31,8 @@ namespace Wetonomy.Groups
 
                     break;
             }
+
+            return context;
         }
     }
 }

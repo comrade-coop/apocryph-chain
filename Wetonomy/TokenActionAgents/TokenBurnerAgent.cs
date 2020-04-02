@@ -12,26 +12,27 @@ namespace Wetonomy.TokenActionAgents
 {
     class TokenBurnerAgent<T> where T : IEquatable<T>
     {
-
-
-        public static void Run(IAgentContext<TokenBurnerState<T>> context, string sender, object message)
+        public static AgentContext<TokenBurnerState<T>> Run(object state, AgentCapability sender, object message)
         {
-            if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender, message.GetType())))
+            var context = new AgentContext<TokenBurnerState<T>>(state as TokenBurnerState<T>);
+
+            if (message is AbstractTriggerer msg && context.State.TriggererToAction.ContainsKey((sender.AgentId, message.GetType())))
             {
-                var result = RecipientState<T>.TriggerCheck(context.State, sender, msg);
+                var result = RecipientState<T>.TriggerCheck(context.State, sender.AgentId, msg);
 
                 foreach (BurnTokenMessage<T> action in result)
                 {
                     context.SendMessage(context.State.TokenManagerAgent, action, null);
                 }
 
-                return;
+                return context;
             }
 
             switch(message)
             {
-                case TokenActionAgentInitMessage organizationInitMessage:
+                case TokenActionAgentInitMessage<T> organizationInitMessage:
                     context.State.TokenManagerAgent = organizationInitMessage.TokenManagerAgentCapability;
+                    context.State.TriggererToAction = organizationInitMessage.TriggererToAction;
                     break;
                 case TokensTransferedMessage<T> transferedMessage:
                     if (context.State.AddRecipient(transferedMessage.From))
@@ -50,6 +51,8 @@ namespace Wetonomy.TokenActionAgents
                     }
                     break;
             }
+
+            return context;
         }
 
     }

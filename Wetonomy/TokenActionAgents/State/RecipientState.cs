@@ -6,12 +6,16 @@ using Wetonomy.TokenActionAgents.Messages;
 
 namespace Wetonomy.TokenActionAgents.State
 {
+
+    public delegate IList<object> TriggerMessage<T>(RecipientState<T> state, AbstractTriggerer message) where T: IEquatable<T>;
     public class RecipientState<T> where T: IEquatable<T>
     {
-        //Capability
+
         public AgentCapability TokenManagerAgent;
 
-        public Dictionary<(string, Type), Func<RecipientState<T>, AbstractTriggerer, IList<object>>> TriggererToAction;
+        //using string for Agent identifier because we do not need capabilities,
+        //the trigger is notification that something has happened
+        public Dictionary<(string, Type), TriggerMessage<T>> TriggererToAction;
 
         public List<T> Recipients = new List<T>();
 
@@ -34,7 +38,7 @@ namespace Wetonomy.TokenActionAgents.State
 
         public static IList<object> TriggerCheck(RecipientState<T> state, string sender, AbstractTriggerer message)
         {
-            Func<RecipientState<T>, AbstractTriggerer, IList<object>> func = state.TriggererToAction[(sender, message.GetType())];
+            TriggerMessage<T> func = state.TriggererToAction[(sender, message.GetType())];
 
             IList<object> result = func.Invoke(state, message);
 

@@ -10,7 +10,7 @@ namespace Wetonomy.Voting
 {
     public static class VotingAgent<T,V> where V : IEnumerable
     {
-        public class MemberState
+        public class VotingState
         {
             //Just Temporary solution
             public int nonce = 0;
@@ -22,8 +22,10 @@ namespace Wetonomy.Voting
             public Dictionary<string, AgentCapability> Capabilities = new Dictionary<string, AgentCapability>();
         }
 
-        public static void Run(IAgentContext<MemberState> context, string sender, object message)
+        public static AgentContext<VotingState> Run(object state, string sender, object message)
         {
+            var context = new AgentContext<VotingState>(state as VotingState);
+
             switch (message)
             {
                 case AddVoteMessage<V> addVoteMessage:
@@ -75,6 +77,8 @@ namespace Wetonomy.Voting
 
                     break;
             }
+
+            return context;
         }
     }
 }
