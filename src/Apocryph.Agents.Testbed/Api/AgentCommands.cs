@@ -4,7 +4,6 @@ namespace Apocryph.Agents.Testbed.Api
     {
         public string Origin;
 
-        public object State { get; set; }
         public AgentCommand[] Commands { get; set; }
     }
 }

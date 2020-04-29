@@ -1,4 +1,5 @@
-﻿using System;
+using Apocryph.Agents.Testbed.Core;
+using System;
 using System.Collections.Generic;
 using System.Threading.Channels;
 
@@ -31,12 +32,12 @@ namespace Apocryph.Agents.Testbed.Api
 
         public AgentCommands GetCommands()
         {
-            return new AgentCommands {Origin = _self.Issuer, State = InternalState, Commands = _commands.ToArray()};
+            return new AgentCommands {Origin = _self.Issuer, Commands = _commands.ToArray()};
         }
 
         public AgentCapability IssueCapability(Type[] messageTypes)
         {
-            var result = new AgentCapability {Issuer = _self.Issuer, MessageTypes = messageTypes};
+            var result = new AgentCapability(_self.Issuer, messageTypes);
             return result;
         }
 
@@ -62,7 +63,17 @@ namespace Apocryph.Agents.Testbed.Api
 
         public void SendMessage(AgentCapability receiver, object message, AgentCallTicket callTicket)
         {
-            _commands.Add(new AgentCommand{CommandType = AgentCommandType.SendMessage, Receiver = receiver, Message = message});
+            if (message is ForwardMessage msg)
+            {
+
+                msg.Message.Origin = _self.Issuer;
+                msg.Message.Sender = _self.Issuer;
+                _commands.Add(new AgentCommand { CommandType = AgentCommandType.SendMessage, Receiver = receiver, Message = msg });
+            }
+            else
+            {
+                _commands.Add(new AgentCommand { CommandType = AgentCommandType.SendMessage, Receiver = receiver, Message = message });
+            }
         }
 
         public void AddReminder(TimeSpan time, object data)
@@ -78,6 +89,20 @@ namespace Apocryph.Agents.Testbed.Api
         public void AddSubscription(string target)
         {
             _commands.Add(new AgentCommand{CommandType = AgentCommandType.Subscribe, AgentId = target});
+        }
+
+        public void ForwardMessage(AgentCapability receiver, ForwardableMessage message, AgentCallTicket callTicket)
+        {
+            message.Sender = _self.Issuer;
+            _commands.Add(new AgentCommand { CommandType = AgentCommandType.SendMessage, Receiver = receiver, Message = message });
+        }
+
+        public void MergeSecondaryContext(AgentCommands secondary)
+        {
+            foreach(var command in secondary.Commands)
+            {
+                _commands.Add(command);
+            }
         }
 
         public void SendServiceMessage(string service, object parameters)

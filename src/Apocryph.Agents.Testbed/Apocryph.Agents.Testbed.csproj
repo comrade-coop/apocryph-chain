@@ -1,11 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.8" />
+      <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.8" />
+      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.9" />
+      <PackageReference Include="System.Collections" Version="4.3.0" />
     </ItemGroup>
     
 </Project>

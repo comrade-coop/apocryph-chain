@@ -1,10 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agents.Testbed.Api;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Model;
 
@@ -18,66 +23,130 @@ namespace Apocryph.Agents.Testbed
         {
             _logger = logger;
         }
-
-        public async Task Setup(PerperStreamContext context, string agentDelegate, string runtimeDelegate, string monitorDelegate,
+        //Setup(context, "ManyAgentsTest", "Runtime", "Monitor", cancellationToken);
+        public async Task Setup(PerperStreamContext context, string agentDelegate, string runtimeDelegate, string monitorDelegate, string serverDelegate,
             CancellationToken cancellationToken)
         {
             var runtime = context.DeclareStream(runtimeDelegate);
-            await context.StreamFunctionAsync(runtime, new {agentDelegate, commands = runtime});
-            await context.StreamActionAsync(monitorDelegate, new {commands = runtime});
+            await context.StreamFunctionAsync(runtime, new { agentDelegate, serverDelegate, commands = runtime });
+            await context.StreamActionAsync(monitorDelegate, new { commands = runtime });
             await context.BindOutput(cancellationToken);
         }
 
-        public async Task Agent(Func<object, AgentCapability, object, Task<AgentContext>> entryPoint,
+        public async Task Agent<T>(Func<object, AgentCapability, object, Task<AgentContext<T>>> entryPoint,
             string agentId,
             object initMessage,
             IAsyncEnumerable<AgentCommands> commands, IAsyncCollector<AgentCommands> output,
-            CancellationToken cancellationToken)
+            ICollection<object> state,
+            CancellationToken cancellationToken) where T : class
         {
-            var states = new List<object>();
             await Task.WhenAll(
-                InitAgent(entryPoint, states, agentId, initMessage, output),
-                ExecuteAgent(entryPoint, states, agentId, commands, output, cancellationToken));
+                InitAgent(entryPoint, state, agentId, initMessage, output),
+                ExecuteAgent(entryPoint, state, agentId, commands, output, cancellationToken));
         }
 
-        public async Task Runtime(PerperStreamContext context, string agentDelegate,
+        public async Task Runtime(PerperStreamContext context, string agentDelegate, string serverDelegate,
             IAsyncEnumerable<AgentCommands> commands, CancellationToken cancellationToken)
         {
             var agents = new List<IAsyncDisposable>();
+            var agentState = new Dictionary<string, List<object>>();
+
+            var server = await context.StreamFunctionAsync(serverDelegate, new { agentState, commands = context.GetStream() });
+            agents.Add(server);
+
             await Task.WhenAll(
-                InitRuntime(context, agentDelegate, agents),
-                ExecuteRuntime(context, commands, agents, cancellationToken));
+                InitRuntime(context, agentDelegate, agentState, agents),
+                ExecuteRuntime(context, commands, agents, agentState, cancellationToken));
         }
 
         public async Task Monitor(IAsyncEnumerable<AgentCommands> commands,
             CancellationToken cancellationToken)
         {
+            
+
             await foreach (var commandsBatch in commands.WithCancellation(cancellationToken))
             {
                 foreach (var command in commandsBatch.Commands)
-                {
+                {   
                     _logger.LogInformation($"{command.CommandType.ToString()} command with {command.Receiver?.Issuer} receiver");
                 }
             }
         }
 
-        private async Task InitRuntime(PerperStreamContext context, string agentDelegate,
+        public async Task ExecuteClientServer(IAsyncEnumerable<AgentCommands> commands, IAsyncCollector<AgentCommands> output,
+            IDictionary<string, List<object>> agentStates, CancellationToken cancellationToken)
+        {
+            var host = CreateHostBuilder(null).Build();
+            var webSocketService = host.Services.GetService(typeof(WebSocketService)) as WebSocketService;
+            var webSocketClients = webSocketService.WebSocketClients;
+
+            Thread newThread = new Thread(() => RunHost(host));
+            newThread.Start();
+
+            await foreach (var commandsBatch in commands.WithCancellation(cancellationToken))
+            {
+                foreach (var command in commandsBatch.Commands)
+                {
+                    if (command.CommandType == AgentCommandType.Publish)
+                    {
+                        var str = command.Message.ToString();
+                        var msgBytes = Encoding.UTF8.GetBytes(str);
+                        var tasks = new List<Task>();
+                        foreach (var client in webSocketClients)
+                        {
+                            Task current = client.SendAsync(new ArraySegment<byte>(msgBytes, 0, msgBytes.Length), WebSocketMessageType.Text, true, CancellationToken.None);
+                            tasks.Add(current);
+                        }
+                        await Task.WhenAll(tasks);
+
+                        var cmd = new AgentCommand()
+                        {
+                            CommandType = AgentCommandType.SendMessage,
+                            Message = new AgentRootInitMessage(),
+                            Receiver = new AgentCapability("AgentRoot", typeof(int))
+                        };
+                        var cmds = new AgentCommands { Commands = new AgentCommand[] { cmd } };
+                        await output.AddAsync(cmds);
+                    }
+                }
+            }
+        }
+
+
+        public static void RunHost(IHost host)
+        {
+            host.Run();
+        }
+
+        public IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<WebSocketServerStartup>();
+                });
+
+
+        private async Task InitRuntime(PerperStreamContext context, string agentDelegate, IDictionary<string, List<object>> agentState,
             ICollection<IAsyncDisposable> agents)
         {
             await Task.Delay(TimeSpan.FromSeconds(1)); //Wait for Execute to engage Runtime
 
+            var state = new List<object>();
             var agent = await context.StreamFunctionAsync(agentDelegate, new
             {
                 agentId = "AgentRoot",
                 initMessage = new AgentRootInitMessage(),
-                commands = context.GetStream()
+                commands = context.GetStream(),
+                state
             });
             agents.Add(agent);
+
+            
+            agentState.Add("AgentRoot", state);
             await context.RebindOutput(agents);
         }
 
-        private async Task ExecuteRuntime(PerperStreamContext context, IAsyncEnumerable<AgentCommands> commands,
-            ICollection<IAsyncDisposable> agents, CancellationToken cancellationToken)
+        private async Task ExecuteRuntime(PerperStreamContext context, IAsyncEnumerable<AgentCommands> commands, 
+            ICollection<IAsyncDisposable> agents, IDictionary<string, List<object>> agentState, CancellationToken cancellationToken)
         {
             await foreach (var commandsBatch in commands.WithCancellation(cancellationToken))
             {
@@ -85,41 +154,43 @@ namespace Apocryph.Agents.Testbed
                 {
                     if (command.CommandType == AgentCommandType.CreateAgent)
                     {
+                        var state = new List<object>();
                         var agent = await context.StreamFunctionAsync(command.Agent, new
                         {
                             agentId = command.AgentId,
                             initMessage = command.Message,
-                            commands = context.GetStream()
+                            commands = context.GetStream(),
+                            state
                         });
                         agents.Add(agent);
+                        
+                        agentState.Add(command.AgentId, state);
                     }
                 }
                 await context.RebindOutput(agents);
             }
         }
 
-        private async Task InitAgent(Func<object, AgentCapability, object, Task<AgentContext>> entryPoint,
+        private async Task InitAgent<T>(Func<object, AgentCapability, object, Task<AgentContext<T>>> entryPoint,
             ICollection<object> states,
             string agentId,
-            object initMessage, IAsyncCollector<AgentCommands> output)
+            object initMessage, IAsyncCollector<AgentCommands> output) where T: class
         {
             await Task.Delay(TimeSpan.FromSeconds(1)); //Wait for Execute to engage Runtime
 
-            var agentContext = await entryPoint(null,
-                new AgentCapability
-                {
-                    Issuer = agentId,
-                    MessageTypes = new[] {initMessage.GetType()}
-                }, initMessage);
+            var agentContext = await entryPoint(
+                null,
+                new AgentCapability(agentId, new[] {initMessage.GetType()}),
+                initMessage);
             states.Add(agentContext.InternalState);
             await output.AddAsync(agentContext.GetCommands());
         }
 
-        private async Task ExecuteAgent(Func<object, AgentCapability, object, Task<AgentContext>> entryPoint,
+        private async Task ExecuteAgent<T>(Func<object, AgentCapability, object, Task<AgentContext<T>>> entryPoint,
             ICollection<object> states,
             string agentId,
             IAsyncEnumerable<AgentCommands> commands, IAsyncCollector<AgentCommands> output,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken) where T : class
         {
             var publishers = new HashSet<string>();
             await foreach (var commandsBatch in commands.WithCancellation(cancellationToken))
@@ -145,7 +216,7 @@ namespace Apocryph.Agents.Testbed
                     }
                     else if (command.CommandType == AgentCommandType.Publish && publishers.Contains(commandsBatch.Origin))
                     {
-                        var agentContext = await entryPoint(states.Last(), new AgentCapability {Issuer = agentId}, command.Message);
+                        var agentContext = await entryPoint(states.Last(), new AgentCapability(agentId, typeof(string)), command.Message);
                         states.Add(agentContext.InternalState);
                         await output.AddAsync(agentContext.GetCommands(), cancellationToken);
                     }
