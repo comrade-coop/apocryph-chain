@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -11,6 +12,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Agents.Testbed
@@ -74,55 +76,57 @@ namespace Apocryph.Agents.Testbed
         }
 
         public async Task ExecuteClientServer(IAsyncEnumerable<AgentCommands> commands, IAsyncCollector<AgentCommands> output,
-            IDictionary<string, List<object>> agentStates, CancellationToken cancellationToken)
+            IDictionary<string, List<object>> _, CancellationToken cancellationToken)
         {
-            var host = CreateHostBuilder(null).Build();
-            var webSocketService = host.Services.GetService(typeof(WebSocketService)) as WebSocketService;
-            var webSocketClients = webSocketService.WebSocketClients;
+
+            var host = CreateHost();
+
+            var clientService = host.Services.GetService(typeof(ClientService)) as ClientService;
+            clientService.Output = output;
 
             Thread newThread = new Thread(() => RunHost(host));
             newThread.Start();
 
             await foreach (var commandsBatch in commands.WithCancellation(cancellationToken))
             {
+                if (!clientService.AgentStates.ContainsKey(commandsBatch.Origin))
+                {
+                    clientService.AgentStates.Add(commandsBatch.Origin, commandsBatch.State);
+                }
+                clientService.AgentStates[commandsBatch.Origin] = commandsBatch.State;
+
                 foreach (var command in commandsBatch.Commands)
                 {
                     if (command.CommandType == AgentCommandType.Publish)
                     {
                         var str = command.Message.ToString();
-                        var msgBytes = Encoding.UTF8.GetBytes(str);
+                        string serialized = JsonConvert.SerializeObject(command);
+                        var msgBytes = Encoding.UTF8.GetBytes(serialized);
                         var tasks = new List<Task>();
-                        foreach (var client in webSocketClients)
+
+                        foreach (var client in clientService.WebSocketClients)
                         {
                             Task current = client.SendAsync(new ArraySegment<byte>(msgBytes, 0, msgBytes.Length), WebSocketMessageType.Text, true, CancellationToken.None);
                             tasks.Add(current);
                         }
                         await Task.WhenAll(tasks);
-
-                        var cmd = new AgentCommand()
-                        {
-                            CommandType = AgentCommandType.SendMessage,
-                            Message = new AgentRootInitMessage(),
-                            Receiver = new AgentCapability("AgentRoot", typeof(int))
-                        };
-                        var cmds = new AgentCommands { Commands = new AgentCommand[] { cmd } };
-                        await output.AddAsync(cmds);
                     }
                 }
             }
         }
 
-
-        public static void RunHost(IHost host)
+        public void RunHost(IHost host)
         {
             host.Run();
         }
 
-        public IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
+        public IHost CreateHost()
+        {
+            return Host.CreateDefaultBuilder().ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<WebSocketServerStartup>();
-                });
+                }).Build();
+        }
 
 
         private async Task InitRuntime(PerperStreamContext context, string agentDelegate, IDictionary<string, List<object>> agentState,

@@ -1,7 +1,8 @@
-using Apocryph.Agents.Testbed.Core;
+using Apocryph.Agents.Testbed.Agent;
 using System;
 using System.Collections.Generic;
 using System.Threading.Channels;
+using static Apocryph.Agents.Testbed.Agent.BaseAgent;
 
 namespace Apocryph.Agents.Testbed.Api
 {
@@ -32,12 +33,16 @@ namespace Apocryph.Agents.Testbed.Api
 
         public AgentCommands GetCommands()
         {
-            return new AgentCommands {Origin = _self.Issuer, Commands = _commands.ToArray()};
+            return new AgentCommands {Origin = _self.Issuer, State = InternalState, Commands = _commands.ToArray()};
         }
 
         public AgentCapability IssueCapability(Type[] messageTypes)
         {
             var result = new AgentCapability(_self.Issuer, messageTypes);
+            if (InternalState is BaseState state)
+            {
+                state.SelfIssuedCapabilities.Add(result);
+            }
             return result;
         }
 

@@ -5,20 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apocryph.Agents.Testbed.Core
+namespace Apocryph.Agents.Testbed.Agent
 {
-    public abstract class ForwardingAgent
+    public abstract class ForwardingAgent: BaseAgent
     {
-        public class BaseState
-        {
-            public HashSet<AgentCapability> CapabilitiesForAgent;
-
-            public BaseState()
-            {
-                CapabilitiesForAgent = new HashSet<AgentCapability>();
-            }
-        }
-
         public Task<AgentContext<BaseState>> Run(BaseState state, AgentCapability self, object message)
         {
             if (state == null) throw new ArgumentNullException();
