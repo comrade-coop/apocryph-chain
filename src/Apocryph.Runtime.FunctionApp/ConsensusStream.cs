@@ -48,6 +48,7 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("nodes")] List<Node> nodes,
             [Perper("chainData")] Chain chainData,
             [Perper("filter")] IAsyncEnumerable<Block> filter,
+            [Perper("validator")] IAsyncEnumerable<Message<Block>> validator,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("queries")] IAsyncEnumerable<Query<Block>> queries,
             [Perper("output")] IAsyncCollector<object> output,
@@ -59,11 +60,12 @@ namespace Apocryph.Runtime.FunctionApp
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>(), _node, proposerAccount);
+            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Block>(), new HashSet<object>(), _node, proposerAccount);
 
             await TaskHelper.WhenAllOrFail(
                 RunSnowball(context, cancellationToken),
                 HandleChain(chain, cancellationToken),
+                HandleValidator(validator, cancellationToken),
                 HandleFilter(filter, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
@@ -86,6 +88,17 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
+        private async Task HandleValidator(IAsyncEnumerable<Message<Block>> validator, CancellationToken cancellationToken)
+        {
+            await foreach (var message in validator.WithCancellation(cancellationToken))
+            {
+                if (message.Type == MessageType.Valid)
+                {
+                    _proposer!.AddConfirmedBlock(message.Value);
+                }
+            }
+        }
+
         private async Task HandleFilter(IAsyncEnumerable<Block> filter, CancellationToken cancellationToken)
         {
             await foreach (var block in filter.WithCancellation(cancellationToken))
@@ -102,19 +115,26 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (query.Verb == QueryVerb.Response)
                 {
+//                     Console.WriteLine("{0} received result from {1}", _node, query.Sender);
                     await _channel.Writer.WriteAsync(query, cancellationToken);
+//                     Console.WriteLine("{0} processed result from {1}", _node, query.Sender);
                 }
                 else if (query.Verb == QueryVerb.Request)
                 {
-                    await _output!.AddAsync(_snowball!.Query(query), cancellationToken);
+//                     Console.WriteLine("{0} received query from {1}", _node, query.Sender);
+                    var q = _snowball!.Query(query);
+                    await _output!.AddAsync(q, cancellationToken);
+//                     Console.WriteLine("{0} sent result to {1}", _node, q.Receiver);
                 }
             }
         }
 
         private async Task RunSnowball(PerperStreamContext context, CancellationToken cancellationToken)
         {
+            await Task.Delay(2000);
             while (true)
             {
+                await Task.Delay(1000);
                 var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
                 var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), jsonSerializerOptions);
                 _proposers = RandomWalk.Run(serializedBlock).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
@@ -125,19 +145,24 @@ namespace Apocryph.Runtime.FunctionApp
                     opinion = await Propose(context);
                 }
 
-                var k = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
-                _snowball = new Snowball<Block>(_node!, k, 0.6, 3,
+                var k = _nodes!.Length / 3 + 1; // TODO: Move constants to parameters
+                var beta = _nodes!.Length * 2; // TODO: Move constants to parameters
+
+//                 Console.WriteLine("{0} starts new snowball!", _node);
+                _snowball = new Snowball<Block>(_node!, k, 0.6, beta,
                                                 SnowballSend, SnowballRespond, opinion);
 
                 var committedProposal = await _snowball!.Run(_nodes, cancellationToken);
+//                 Console.WriteLine("{0} finished snowball!", _node);
 
                 await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Proposed), cancellationToken);
-                await Task.Delay(1000);
             }
         }
 
         private async IAsyncEnumerable<Query<Block>> SnowballSend(Query<Block>[] queries, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            await Task.Delay(100);
+//             Console.WriteLine("{0} sent queries to {1}", _node, string.Join(":", queries.Select(q => q.Receiver)));
             await Task.WhenAll(queries.Select(q => _output!.AddAsync(q, cancellationToken)));
             await foreach (var answer in _channel.Reader.ReadAllAsync(cancellationToken).Take(queries.Length).WithCancellation(cancellationToken))
             {

@@ -19,29 +19,31 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("output")] IAsyncCollector<IPerperStream> output,
             CancellationToken cancellationToken)
         {
-            await using var gossips = context.DeclareStream(typeof(PeeringStream));
-            await using var queries = context.DeclareStream(typeof(PeeringStream));
-            await using var salts = context.DeclareStream(typeof(SaltsStream));
+            await using var gossips = context.DeclareStream("Peering-gossips", typeof(PeeringStream));
+            await using var queries = context.DeclareStream("Peering-queries", typeof(PeeringStream));
+            await using var salts = context.DeclareStream("Salts", typeof(SaltsStream));
 
-            var chain = await context.StreamFunctionAsync(typeof(ChainStream), new
+            var chain = await context.StreamFunctionAsync("Chain", typeof(ChainStream), new
             {
                 chains,
                 gossips,
                 queries,
-                salts,
-                slotGossips
+                salts = salts.Subscribe(),
+                slotGossips = slotGossips.Subscribe()
             });
             await output.AddAsync(chain);
 
             var node = new Node(Guid.Empty, -1);
-            var ibc = await context.StreamFunctionAsync(typeof(IBCStream), new
+            await using var validator = await context.StreamFunctionAsync("DummyStream", new { });
+            var ibc = await context.StreamFunctionAsync("IBC-global", typeof(IBCStream), new
             {
                 chain = chain.Subscribe(),
-                gossips = gossips.Subscribe(),
+                validator = validator.Subscribe(),
                 node,
+                gossips = gossips.Subscribe(),
                 nodes = new Dictionary<Guid, Node?[]>()
             });
-            var filter = await context.StreamFunctionAsync(typeof(FilterStream), new
+            var filter = await context.StreamFunctionAsync("Filter-global", typeof(FilterStream), new
             {
                 ibc = ibc.Subscribe(),
                 gossips = gossips.Subscribe(),

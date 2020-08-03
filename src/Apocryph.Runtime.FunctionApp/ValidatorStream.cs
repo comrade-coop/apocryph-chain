@@ -34,7 +34,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _validator = new Validator(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>());
+            _validator = new Validator(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Block>(), new HashSet<object>());
 
             await TaskHelper.WhenAllOrFail(
                 HandleFilter(filter, cancellationToken),
@@ -70,6 +70,13 @@ namespace Apocryph.Runtime.FunctionApp
                 }
 
                 var valid = await _validatedBlocks[block];
+
+                Console.WriteLine("Validator: {0}", valid);
+
+                if (valid)
+                {
+                    _validator!.AddConfirmedBlock(block);
+                }
 
                 await _output!.AddAsync(new Message<Block>(block, valid ? MessageType.Valid : MessageType.Invalid), cancellationToken);
             }

@@ -21,6 +21,7 @@ namespace Apocryph.Runtime.FunctionApp
             var peers = factory; //.Where(stream => stream.GetDelegate() == filter);
             await foreach (var peer in peers.WithCancellation(cancellationToken))
             {
+                Console.WriteLine("!");
                 output.Add(peer);
                 await context.RebindOutput(output);
             }
