@@ -16,14 +16,13 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("slotGossips")] IPerperStream slotGossips,
             [Perper("chains")] IDictionary<Guid, Chain> chains,
-            [Perper("output")] IAsyncCollector<IPerperStream> output,
             CancellationToken cancellationToken)
         {
             await using var gossips = context.DeclareStream("Peering-gossips", typeof(PeeringStream));
             await using var queries = context.DeclareStream("Peering-queries", typeof(PeeringStream));
             await using var salts = context.DeclareStream("Salts", typeof(SaltsStream));
 
-            var chain = await context.StreamFunctionAsync("Chain", typeof(ChainStream), new
+            await using var chain = await context.StreamFunctionAsync("Chain", typeof(ChainStream), new
             {
                 chains,
                 gossips,
@@ -31,11 +30,15 @@ namespace Apocryph.Runtime.FunctionApp
                 salts = salts.Subscribe(),
                 slotGossips = slotGossips.Subscribe()
             });
-            await output.AddAsync(chain);
 
             var node = new Node(Guid.Empty, -1);
-            await using var validator = await context.StreamFunctionAsync("DummyStream", new { });
-            var ibc = await context.StreamFunctionAsync("IBC-global", typeof(IBCStream), new
+
+            await using var validator = await context.StreamFunctionAsync("DummyStream", new {
+                queries = queries.Subscribe(), // HACK: Make sure the queries peering receives all streams
+                gossips = gossips.Subscribe(), // HACK: Make sure the gossips peering receives all streams
+            });
+
+            await using var ibc = await context.StreamFunctionAsync("IBC-global", typeof(IBCStream), new
             {
                 chain = chain.Subscribe(),
                 validator = validator.Subscribe(),
@@ -43,7 +46,7 @@ namespace Apocryph.Runtime.FunctionApp
                 gossips = gossips.Subscribe(),
                 nodes = new Dictionary<Guid, Node?[]>()
             });
-            var filter = await context.StreamFunctionAsync("Filter-global", typeof(FilterStream), new
+            await using var filter = await context.StreamFunctionAsync("Filter-global", typeof(FilterStream), new
             {
                 ibc = ibc.Subscribe(),
                 gossips = gossips.Subscribe(),
@@ -51,22 +54,27 @@ namespace Apocryph.Runtime.FunctionApp
                 node
             });
 
-            await context.StreamActionAsync(salts, new
+            await context.StreamFunctionAsync(salts, new
             {
                 chains,
                 filter = filter.Subscribe()
             });
 
-            await context.StreamActionAsync(gossips, new
+            await context.StreamFunctionAsync(gossips, new
             {
                 factory = chain.Subscribe(),
                 filter = typeof(IBCStream)
             });
 
-            await context.StreamActionAsync(queries, new
+            await context.StreamFunctionAsync(queries, new
             {
                 factory = chain.Subscribe(),
                 filter = typeof(ConsensusStream)
+            });
+
+            await using var loggingStream = await context.StreamActionAsync(typeof(LoggingStream), new
+            {
+                filter = filter.Subscribe()
             });
 
             await context.BindOutput(cancellationToken);

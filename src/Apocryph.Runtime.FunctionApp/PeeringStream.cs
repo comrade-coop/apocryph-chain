@@ -18,10 +18,11 @@ namespace Apocryph.Runtime.FunctionApp
             CancellationToken cancellationToken)
         {
             var output = new List<IPerperStream>();
+            Console.WriteLine("peering start!");
             var peers = factory; //.Where(stream => stream.GetDelegate() == filter);
             await foreach (var peer in peers.WithCancellation(cancellationToken))
             {
-                Console.WriteLine("!");
+                Console.WriteLine("peering peer!");
                 output.Add(peer);
                 await context.RebindOutput(output);
             }

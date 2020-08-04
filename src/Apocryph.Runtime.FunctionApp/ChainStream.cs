@@ -39,7 +39,7 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            await Task.Delay(500);
+            await Task.Delay(1000);
             _context = context;
             _chains = chains;
             _gossips = gossips;

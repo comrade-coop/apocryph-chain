@@ -27,11 +27,11 @@ namespace TestHarness.FunctionApp
             var pingReference = Guid.NewGuid();
             var pongReference = Guid.NewGuid();
 
-            var chainList = context.DeclareStream("Apocryph.Runtime.FunctionApp.ChainListStream.Run");
+            var slotGossips = await context.StreamFunctionAsync("DummyStream", new { });
 
-            await context.StreamActionAsync(chainList, new
+            await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream.Run", new
             {
-                slotGossips = chainList,
+                slotGossips,
                 chains = new Dictionary<Guid, Chain>
                 {
                     {pingChainId, new Chain(slotCount, new Block(
