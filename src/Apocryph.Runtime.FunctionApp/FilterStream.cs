@@ -17,7 +17,7 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private Dictionary<Guid, Validator> _validators = new Dictionary<Guid, Validator>();
         private Dictionary<Hash, Task<bool>> _validatedBlocks = new Dictionary<Hash, Task<bool>>();
-        private Func<Hash, Task<Block>>? _hashRegistryWorker;
+        private Func<Hash, Task<Block>>? _hashRegistryReader;
         private IAsyncCollector<object>? _output;
 
         [FunctionName(nameof(FilterStream))]
@@ -25,18 +25,24 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("ibc")] IAsyncEnumerable<Message<Hash>> ibc,
             [Perper("gossips")] IAsyncEnumerable<Gossip<Hash>> gossips,
-            [Perper("hashRegistryWorker")] string hashRegistryWorker,
+            [Perper("hashRegistryWriter")] string hashRegistryWriter,
+            [Perper("hashRegistryReader")] string hashRegistryReader,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
+            _hashRegistryReader = hash => context.CallWorkerAsync<Block>(hashRegistryReader, new { hash, type = typeof(Block).AssemblyQualifiedName }, cancellationToken);
+            Func<object, Task> _hashRegistryWriter = value => context.CallWorkerAsync<bool>(hashRegistryWriter, new { value }, cancellationToken);
             _output = output;
 
             foreach (var (chainId, chain) in chains)
             {
                 var executor = new Executor(chainId,
-                    async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-                _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>());
+                    async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, cancellationToken));
+                _validators[chainId] = new Validator(
+                    executor,
+                    hash => context.CallWorkerAsync<object>(hashRegistryReader, new { hash, type = typeof(ICommand).AssemblyQualifiedName, allowMerkleNode = true }, cancellationToken),
+                    value => context.CallWorkerAsync<bool>(hashRegistryWriter, new { value }, cancellationToken),
+                    chainId, chain.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>());
             }
 
             await TaskHelper.WhenAllOrFail(
@@ -49,10 +55,10 @@ namespace Apocryph.Runtime.FunctionApp
                         await Task.Delay(4000);
                         foreach (var (_chainId, validator) in _validators)
                         {
-                            validator.AddConfirmedBlock(chain.GenesisBlock);
+                            await validator.AddConfirmedBlock(chain.GenesisBlock);
                         }
 
-                        await _output!.AddAsync(chain.GenesisBlock, cancellationToken);
+                        await _hashRegistryWriter(chain.GenesisBlock);
                         await _output!.AddAsync(Hash.From(chain.GenesisBlock), cancellationToken);
                     }
                 }),
@@ -74,7 +80,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = message.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = await _hashRegistryWorker!(hash);
+                    var block = await _hashRegistryReader!(hash);
                     _validatedBlocks[hash] = Validate(context, block!);
                 }
 
@@ -82,10 +88,10 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (valid)
                 {
-                    var block = await _hashRegistryWorker!(hash);
+                    var block = await _hashRegistryReader!(hash);
                     foreach (var (chainId, validator) in _validators)
                     {
-                        validator.AddConfirmedBlock(block!);
+                        await validator.AddConfirmedBlock(block!);
                     }
 
                     await _output!.AddAsync(hash, cancellationToken);
@@ -101,7 +107,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = gossip.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = await _hashRegistryWorker!(hash);
+                    var block = await _hashRegistryReader!(hash);
                     _validatedBlocks[hash] = Validate(context, block!);
                 }
             }

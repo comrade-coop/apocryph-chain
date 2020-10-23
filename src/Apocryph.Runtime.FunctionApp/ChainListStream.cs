@@ -17,8 +17,8 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("self")] Peer self,
             [Perper("outsideGossipsStream")] string outsideGossipsStream,
             [Perper("outsideQueriesStream")] string outsideQueriesStream,
-            [Perper("hashRegistryStream")] string hashRegistryStream,
-            [Perper("hashRegistryWorker")] string hashRegistryWorker,
+            [Perper("hashRegistryWriter")] string hashRegistryWriter,
+            [Perper("hashRegistryReader")] string hashRegistryReader,
             [Perper("slotGossipsStream")] string slotGossipsStream,
             [Perper("chains")] IDictionary<Guid, Chain> chains,
             [Perper("output")] IAsyncCollector<int> output,
@@ -39,7 +39,8 @@ namespace Apocryph.Runtime.FunctionApp
                 chains,
                 gossips,
                 queries,
-                hashRegistryWorker,
+                hashRegistryWriter,
+                hashRegistryReader,
                 salts = salts.Subscribe(),
                 slotGossips = slotGossips.Subscribe()
             });
@@ -65,19 +66,30 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 ibc = ibc.Subscribe(),
                 gossips = gossips.Subscribe(),
-                hashRegistryWorker,
+                hashRegistryWriter,
+                hashRegistryReader,
                 chains
             });
 
             await context.StreamFunctionAsync(salts, new
             {
                 filter = filter.Subscribe(),
-                hashRegistryWorker,
+                hashRegistryReader,
                 chains
             });
 
-            await using var outsideGossips = context.DeclareStream(outsideGossipsStream);
-            await using var outsideQueries = context.DeclareStream(outsideQueriesStream);
+            await using var outsideGossips = await context.StreamFunctionAsync(outsideQueriesStream, new
+            {
+                self,
+                chain = chain.Subscribe(),
+                gossips = peering.Subscribe()
+            });
+            await using var outsideQueries = await context.StreamFunctionAsync(outsideQueriesStream, new
+            {
+                self,
+                chain = chain.Subscribe(),
+                queries = peering.Subscribe()
+            });
 
             await context.StreamFunctionAsync(peering, new
             {
@@ -85,31 +97,12 @@ namespace Apocryph.Runtime.FunctionApp
                 initial = new List<IPerperStream>() { filter, outsideGossips, outsideQueries },
             });
 
-            await context.StreamFunctionAsync(outsideGossips, new
-            {
-                self,
-                chain = chain.Subscribe(),
-                gossips = peering.Subscribe()
-            });
-
-            await context.StreamFunctionAsync(outsideQueries, new
-            {
-                self,
-                chain = chain.Subscribe(),
-                queries = peering.Subscribe()
-            });
-
-            await using var hashRegistry = await context.StreamActionAsync("HashRegistry", hashRegistryStream, new
-            {
-                input = hashes.Subscribe()
-            });
-
             await using var reportsStream = await context.StreamActionAsync("Reports", typeof(ReportsStream), new
             {
                 chain = chain.Subscribe(),
                 filter = filter.Subscribe(),
                 reports = reports.Subscribe(),
-                hashRegistryWorker,
+                hashRegistryReader,
                 nodes = new Dictionary<Guid, Node?[]>()
             });
 

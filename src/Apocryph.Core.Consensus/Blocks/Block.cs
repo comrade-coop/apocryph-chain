@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Apocryph.Core.Consensus.Blocks.Command;
 using Apocryph.Core.Consensus.VirtualNodes;
 
 namespace Apocryph.Core.Consensus.Blocks
@@ -13,12 +12,12 @@ namespace Apocryph.Core.Consensus.Blocks
         public Guid ChainId { get; set; }
         public Guid ProposerAccount { get; set; }
         public Node? Proposer { get; set; }
-        public ICommand[] InputCommands { get; }
-        public ICommand[] Commands { get; }
+        public Hash? InputCommands { get; }
+        public Hash? OutputCommands { get; }
         public Dictionary<string, byte[]> States { get; }
         public Dictionary<Guid, (string, string[])> Capabilities { get; }
 
-        public Block(Hash previous, Guid chainId, Node? proposer, Guid proposerAccount, Dictionary<string, byte[]> states, ICommand[] inputCommands, ICommand[] commands, Dictionary<Guid, (string, string[])> capabilities)
+        public Block(Hash previous, Guid chainId, Node? proposer, Guid proposerAccount, Dictionary<string, byte[]> states, Hash? inputCommands, Hash? outputCommands, Dictionary<Guid, (string, string[])> capabilities)
         {
             Previous = previous;
             ChainId = chainId;
@@ -26,7 +25,7 @@ namespace Apocryph.Core.Consensus.Blocks
             ProposerAccount = proposerAccount;
             States = states;
             InputCommands = inputCommands;
-            Commands = commands;
+            OutputCommands = outputCommands;
             Capabilities = capabilities;
         }
 
@@ -38,8 +37,8 @@ namespace Apocryph.Core.Consensus.Blocks
                 && ProposerAccount == other.ProposerAccount
                 && (Proposer != null ? Proposer.Equals(other.Proposer) : other.Proposer == null)
                 && States.Count() == other.States.Count() && States.All(kv => other.States.ContainsKey(kv.Key) && kv.Value.SequenceEqual(other.States[kv.Key]))
-                && (InputCommands as IStructuralEquatable).Equals(other.InputCommands, EqualityComparer<object>.Default)
-                && (Commands as IStructuralEquatable).Equals(other.Commands, EqualityComparer<object>.Default)
+                && InputCommands.Equals(other.InputCommands)
+                && OutputCommands.Equals(other.OutputCommands)
                 && Capabilities.Count() == other.Capabilities.Count() && Capabilities.All(kv => other.Capabilities.ContainsKey(kv.Key) && (kv.Value as IStructuralEquatable).Equals(other.Capabilities[kv.Key], StructuralComparisons.StructuralEqualityComparer));
         }
 
@@ -62,8 +61,8 @@ namespace Apocryph.Core.Consensus.Blocks
                 hash.Add(key);
                 Array.ForEach(state, hash.Add);
             }
-            Array.ForEach(InputCommands, hash.Add);
-            Array.ForEach(Commands, hash.Add);
+            hash.Add(InputCommands);
+            hash.Add(OutputCommands);
             foreach (var (key, capability) in Capabilities)
             {
                 hash.Add(key);
@@ -75,7 +74,7 @@ namespace Apocryph.Core.Consensus.Blocks
 
         public override string ToString()
         {
-            return $"Block({ChainId}, {Proposer}, {ProposerAccount}, InputCommands = [{string.Join(", ", (object[])InputCommands)}], Commands = [{string.Join(", ", (object[])Commands)}], States = [{string.Join(", ", States.Keys)}], Capabilities = [{string.Join(", ", Capabilities.Keys)}])";
+            return $"Block({ChainId}, {Proposer}, {ProposerAccount}, InputCommands = {InputCommands}, OutputCommands = {OutputCommands}, States = [{string.Join(", ", States.Keys)}], Capabilities = [{string.Join(", ", Capabilities.Keys)}])";
         }
     }
 }

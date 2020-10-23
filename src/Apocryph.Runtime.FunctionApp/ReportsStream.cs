@@ -24,7 +24,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Dictionary<Node, Dictionary<Type, Report>> _reports = new Dictionary<Node, Dictionary<Type, Report>>();
         private Dictionary<Guid, Node?[]>? _nodes;
         private Dictionary<Guid, Hash> _blocks = new Dictionary<Guid, Hash>();
-        private Func<Hash, Task<Block>>? _hashRegistryWorker;
+        private Func<Hash, Task<Block>>? _hashRegistryReader;
 
         [FunctionName(nameof(ReportsStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
@@ -32,11 +32,11 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("filter")] IAsyncEnumerable<Hash> filter,
             [Perper("reports")] IAsyncEnumerable<Report> reports,
-            [Perper("hashRegistryWorker")] string hashRegistryWorker,
+            [Perper("hashRegistryReader")] string hashRegistryReader,
             CancellationToken cancellationToken)
         {
             _nodes = nodes;
-            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
+            _hashRegistryReader = hash => context.CallWorkerAsync<Block>(hashRegistryReader, new { hash, type = typeof(Block).AssemblyQualifiedName }, cancellationToken);
 
             await TaskHelper.WhenAllOrFail(
                 RunServer(cancellationToken),
@@ -49,7 +49,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter)
             {
-                var block = await _hashRegistryWorker!(hash);
+                var block = await _hashRegistryReader!(hash);
                 _blocks[block!.ChainId] = hash;
             }
         }
@@ -108,7 +108,7 @@ namespace Apocryph.Runtime.FunctionApp
                         endpoints.MapGet("/block/{Hash}", WrapEndpoint(async (values) =>
                         {
                             var hash = Hash.Parse((string)values["Hash"]);
-                            var block = await _hashRegistryWorker!(hash);
+                            var block = await _hashRegistryReader!(hash);
                             return block;
                         }));
                         endpoints.MapGet("/node", WrapEndpoint((values) =>

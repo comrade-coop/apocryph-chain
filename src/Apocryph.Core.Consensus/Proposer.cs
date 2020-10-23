@@ -23,10 +23,14 @@ namespace Apocryph.Core.Consensus
         private HashSet<ICommand> _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
         private Executor _executor;
+        private Func<Hash, Task<object>> _hashRegistryReader;
+        private Func<object, Task> _hashRegistryWriter;
 
-        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<Hash> confirmedBlocks, HashSet<ICommand> pendingCommands, Node? proposer, Guid proposerAccount)
+        public Proposer(Executor executor, Func<Hash, Task<object>> hashRegistryReader, Func<object, Task> hashRegistryWriter, Guid chainId, Block lastBlock, HashSet<Hash> confirmedBlocks, HashSet<ICommand> pendingCommands, Node? proposer, Guid proposerAccount)
         {
             _executor = executor;
+            _hashRegistryReader = hashRegistryReader;
+            _hashRegistryWriter = hashRegistryWriter;
             _chainId = chainId;
             _lastBlock = lastBlock;
             _lastBlockHash = Hash.From(_lastBlock);
@@ -67,8 +71,10 @@ namespace Apocryph.Core.Consensus
             var (newState, newCommands, newCapabilities) = await _executor.Execute(
                 _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
 
+            var inputs = await MerkleTree.CreateAsync(inputCommands, _hashRegistryWriter);
+            var outputs = await MerkleTree.CreateAsync(newCommands, _hashRegistryWriter);
             // Include historical blocks as per protocol
-            var result = new Block(_lastBlockHash, _chainId, _proposer, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+            var result = new Block(_lastBlockHash, _chainId, _proposer, _proposerAccount, newState, inputs.Root, outputs.Root, newCapabilities);
 
             _proposerAccount = Guid.NewGuid();
 
@@ -76,12 +82,14 @@ namespace Apocryph.Core.Consensus
         }
 
 
-        public void AddConfirmedBlock(Block block)
+        public async Task AddConfirmedBlock(Block block)
         {
             var hash = Hash.From(block);
             if (!_confirmedBlocks.Add(hash)) return;
 
-            _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
+            var inputCommands = (await MerkleTree.LoadAsync(block.InputCommands, _hashRegistryReader)).Values.Cast<ICommand>().ToArray();
+            var outputCommands = (await MerkleTree.LoadAsync(block.OutputCommands, _hashRegistryReader)).Values.Cast<ICommand>().ToArray();
+            _pendingCommands!.UnionWith(outputCommands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
             if (_pendingCommands!.Count > 0)
             {
                 _pendingCommandsTaskCompletionSource?.TrySetResult(true);
@@ -97,7 +105,7 @@ namespace Apocryph.Core.Consensus
                         BlockId = new byte[] { },
                         ProcessedCommands = new Dictionary<Guid, BigInteger>()
                         {
-                            [block.ProposerAccount] = block.InputCommands.Length,
+                            [block.ProposerAccount] = inputCommands.Length,
                         },
                         UsedTickets = new Dictionary<Guid, BigInteger>() { }, // TODO: Keep track of tickets
                         UnlockedTickets = new Dictionary<Guid, BigInteger>() { },
@@ -108,7 +116,7 @@ namespace Apocryph.Core.Consensus
             {
                 _lastBlock = block;
                 _lastBlockHash = hash;
-                _pendingCommands.ExceptWith(block.InputCommands);
+                _pendingCommands.ExceptWith(inputCommands);
             }
         }
     }

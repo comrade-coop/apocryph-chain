@@ -97,15 +97,10 @@ namespace Apocryph.Runtime.Reporting
 
                 Console.WriteLine("Last block: {0} by {1}", lastChainBlockHash, lastChainBlock.Proposer);
 
-                foreach (var inputCommand in lastChainBlock.InputCommands)
-                {
-                    Console.WriteLine("  Input: {0}", inputCommand);
-                }
+                // TODO: Load Merkle trees and display their contents
+                Console.WriteLine("  Input: {0}", lastChainBlock.InputCommands);
 
-                foreach (var command in lastChainBlock.Commands)
-                {
-                    Console.WriteLine("  Output: {0}", command);
-                }
+                Console.WriteLine("  Output: {0}", lastChainBlock.OutputCommands);
 
                 foreach (var (stateName, state) in lastChainBlock.States)
                 {

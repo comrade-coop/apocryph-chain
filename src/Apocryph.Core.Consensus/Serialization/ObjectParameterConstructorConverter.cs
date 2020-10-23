@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,10 +12,11 @@ namespace Apocryph.Core.Consensus.Serialization
     {
         public bool AllowSubtypes { get; set; } = false;
         public string TypeProperty { get; set; } = "$type";
+        public Func<Type, Type, bool>? SubtypeFilter { get; set; }
 
         public override bool CanConvert(Type type)
         {
-            return !type.IsArray && !type.IsPrimitive && type != typeof(string) && type != typeof(Guid) && !typeof(IEnumerable).IsAssignableFrom(type) && !type.GetConstructors().Any(c => c.GetParameters().Length == 0);
+            return !type.IsArray && !type.IsPrimitive && type != typeof(string) && type != typeof(Guid) && !typeof(IEnumerable).IsAssignableFrom(type) && (AllowSubtypes || !type.GetConstructors().Any(c => c.GetParameters().Length == 0));
         }
 
         public override JsonConverter CreateConverter(Type type, JsonSerializerOptions options)
@@ -60,7 +62,9 @@ namespace Apocryph.Core.Consensus.Serialization
                     {
                         var typeName = JsonSerializer.Deserialize<string>(ref reader, options);
                         var newType = Type.GetType(typeName);
-                        if (newType != null && typeToConvert.IsAssignableFrom(newType))
+                        if (newType != null &&
+                            typeToConvert.IsAssignableFrom(newType) &&
+                            (Factory.SubtypeFilter?.Invoke(typeToConvert, newType) ?? true))
                         {
                             typeToConvert = newType;
                         }
@@ -165,15 +169,19 @@ namespace Apocryph.Core.Consensus.Serialization
                 return new string(name.Where(char.IsLetterOrDigit).Select(x => char.ToLower(x)).ToArray());
             }
 
+            // Ugly hack
+            private static ThreadLocal<(int, Type)?> NextType = new ThreadLocal<(int, Type)?>();
+
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
             {
                 writer.WriteStartObject();
 
-                var type = typeof(T);
+                var oldNextType = NextType.Value;
+                var expectedType = oldNextType?.Item1 == writer.CurrentDepth ? oldNextType?.Item2 : null;
+                var type = value?.GetType()!;
 
-                if (value?.GetType() != typeof(T) && Factory.AllowSubtypes)
+                if (type != expectedType && Factory.AllowSubtypes)
                 {
-                    type = value?.GetType()!;
                     // Note: Might need to use Assembly Qualified Name here
                     writer.WriteString(Factory.TypeProperty, type.FullName);
                 }
@@ -189,7 +197,9 @@ namespace Apocryph.Core.Consensus.Serialization
 
                     var propertyValue = property.GetValue(value);
 
+                    NextType.Value = (writer.CurrentDepth + 1, property.PropertyType);
                     JsonSerializer.Serialize(writer, propertyValue, property.PropertyType, options);
+                    NextType.Value = oldNextType;
                 }
 
                 foreach (var field in type.GetFields())
@@ -203,7 +213,9 @@ namespace Apocryph.Core.Consensus.Serialization
 
                     var propertyValue = field.GetValue(value);
 
+                    NextType.Value = (writer.CurrentDepth + 1, field.FieldType);
                     JsonSerializer.Serialize(writer, propertyValue, field.FieldType, options);
+                    NextType.Value = oldNextType;
                 }
 
                 writer.WriteEndObject();

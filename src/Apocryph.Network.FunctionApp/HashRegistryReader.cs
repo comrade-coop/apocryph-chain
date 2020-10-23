@@ -1,8 +1,8 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
 using Apocryph.Core.Consensus.Blocks;
-using Block = Apocryph.Core.Consensus.Blocks.Block;
 using Apocryph.Core.Consensus.Serialization;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -12,19 +12,24 @@ using Ipfs;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class HashRegistryWorker
+    public class HashRegistryReader
     {
         private static IpfsClient? _ipfsClient;
 
-        [FunctionName(nameof(HashRegistryWorker))]
+        [FunctionName(nameof(HashRegistryReader))]
         [return: Perper("$return")]
-        public async Task<Block> Run([PerperWorkerTrigger] PerperWorkerContext context,
-            [Perper("hash")] Hash hash)
+        public async Task<object> Run([PerperWorkerTrigger] PerperWorkerContext context,
+            [Perper("type")] string _type,
+            [Perper("allowMerkleNode")] bool? allowMerkleNode,
+            [Perper("hash")] Hash hash,
+            CancellationToken cancellationToken)
         {
             if (_ipfsClient == null)
             {
                 _ipfsClient = new IpfsClient();
             }
+
+            var type = Type.GetType(_type)!;
 
             var cid = new Cid { ContentType = "raw", Hash = new MultiHash("sha2-256", hash.Value) };
 
@@ -32,9 +37,14 @@ namespace Apocryph.Runtime.FunctionApp
             // See https://github.com/richardschneider/net-ipfs-http-client/issues/62 for more details.
             // var block = await _ipfsClient.Block.GetAsync(multihash);
 
-            var stream = await _ipfsClient.PostDownloadAsync("block/get", default(CancellationToken), cid);
+            var stream = await _ipfsClient.PostDownloadAsync("block/get", cancellationToken, cid);
 
-            return await JsonSerializer.DeserializeAsync<Block>(stream, ApocryphSerializationOptions.JsonSerializerOptions);
+
+            var value = (allowMerkleNode ?? false) ?
+                await JsonSerializer.DeserializeAsync(stream, typeof(object), ApocryphSerializationOptions.JsonSerializerOptionsMerkleTree(type), cancellationToken) :
+                await JsonSerializer.DeserializeAsync(stream, type, ApocryphSerializationOptions.JsonSerializerOptions, cancellationToken);
+
+            return value;
         }
     }
 }

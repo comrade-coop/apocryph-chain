@@ -23,7 +23,8 @@ namespace Apocryph.Runtime.FunctionApp
         private Dictionary<int, Hash> _pastBlocks = new Dictionary<int, Hash>();
         private int _round = 0;
         private Proposer? _proposer;
-        private Func<Hash, Task<Block>>? _hashRegistryWorker;
+        private Func<Hash, Task<Block>>? _hashRegistryReader;
+        private Func<object, Task>? _hashRegistryWriter;
         private IAsyncCollector<object>? _output;
         private Dictionary<Node, TaskCompletionSource<Query<Hash>>> _receiveCompletionSources = new Dictionary<Node, TaskCompletionSource<Query<Hash>>>();
 
@@ -37,18 +38,25 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("validator")] IAsyncEnumerable<Message<Hash>> validator,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("queries")] IAsyncEnumerable<Query<Hash>> queries,
-            [Perper("hashRegistryWorker")] string hashRegistryWorker,
+            [Perper("hashRegistryWriter")] string hashRegistryWriter,
+            [Perper("hashRegistryReader")] string hashRegistryReader,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;
             _node = node;
             _nodes = nodes.ToArray();
-            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
+            _hashRegistryReader = hash => context.CallWorkerAsync<Block>(hashRegistryReader, new { hash, type = typeof(Block).AssemblyQualifiedName }, cancellationToken);
+            _hashRegistryWriter = value => context.CallWorkerAsync<bool>(hashRegistryWriter, new { value }, cancellationToken);
+            _output = output;
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>(), _node, proposerAccount);
+            _proposer = new Proposer(
+                executor,
+                hash => context.CallWorkerAsync<object>(hashRegistryReader, new { hash, type = typeof(ICommand).AssemblyQualifiedName, allowMerkleNode = true }, cancellationToken),
+                value => context.CallWorkerAsync<bool>(hashRegistryWriter, new { value }, cancellationToken),
+                _node!.ChainId, chainData.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>(), _node, proposerAccount);
 
             await TaskHelper.WhenAllOrFail(
                 RunReports(context, cancellationToken),
@@ -63,7 +71,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             var proposal = await _proposer!.Propose();
 
-            await _output!.AddAsync(proposal);
+            await _hashRegistryWriter!(proposal);
 
             return Hash.From(proposal);
         }
@@ -87,8 +95,8 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 if (message.Type == MessageType.Valid)
                 {
-                    var block = await _hashRegistryWorker!(message.Value);
-                    _proposer!.AddConfirmedBlock(block!);
+                    var block = await _hashRegistryReader!(message.Value);
+                    await _proposer!.AddConfirmedBlock(block!);
                 }
             }
         }
@@ -97,8 +105,8 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter.WithCancellation(cancellationToken))
             {
-                var block = await _hashRegistryWorker!(hash);
-                _proposer!.AddConfirmedBlock(block!);
+                var block = await _hashRegistryReader!(hash);
+                await _proposer!.AddConfirmedBlock(block!);
             }
         }
 
@@ -196,8 +204,8 @@ namespace Apocryph.Runtime.FunctionApp
         private bool IsNewBlockBetter(Hash current, Hash suggested)
         {
             // TODO: change .Result to await
-            var currentBlock = _hashRegistryWorker!(current).Result;
-            var suggestedBlock = _hashRegistryWorker!(suggested).Result;
+            var currentBlock = _hashRegistryReader!(current).Result;
+            var suggestedBlock = _hashRegistryReader!(suggested).Result;
 
             if (currentBlock == null) return true;
             if (suggestedBlock == null) return false;

@@ -21,6 +21,24 @@ namespace TestHarness.FunctionApp
             PerperModuleContext context,
             CancellationToken cancellationToken)
         {
+            var mode = Environment.GetEnvironmentVariable("ApocryphEnvironment");
+            var self = new Peer(new byte[0]);
+            var slotGossipsStream = "DummyStream";
+            var hashRegistryWriter = typeof(HashRegistryWriter).FullName! + ".Run";
+            var hashRegistryReader = typeof(HashRegistryReader).FullName! + ".Run";
+            var outsideGossipsStream = "DummyStream";
+            var outsideQueriesStream = "DummyStream";
+
+            if (mode == "ipfs")
+            {
+                self = await context.CallWorkerAsync<Peer>("Apocryph.Runtime.FunctionApp.SelfPeerWorker.Run", new { }, default);
+                slotGossipsStream = "Apocryph.Runtime.FunctionApp.IpfsSlotGossipStream.Run";
+                hashRegistryWriter = "Apocryph.Runtime.FunctionApp.HashRegistryWriter.Run";
+                hashRegistryReader = "Apocryph.Runtime.FunctionApp.HashRegistryReader.Run";
+                outsideGossipsStream = "Apocryph.Runtime.FunctionApp.IpfsGossipStream.Run";
+                outsideQueriesStream = "Apocryph.Runtime.FunctionApp.IpfsQueryStream.Run";
+            }
+
             var slotCount = 10; // 30
 
             var pingChainId = Guid.NewGuid();
@@ -30,6 +48,7 @@ namespace TestHarness.FunctionApp
             var pingReference = Guid.NewGuid();
             var pongReference = Guid.NewGuid();
 
+            Func<object, Task> merkleTreeSaver = value => context.CallWorkerAsync<bool>(hashRegistryWriter, new { value }, cancellationToken);
             var chains = new Dictionary<Guid, Chain>
             {
                 {pingChainId, new Chain(slotCount, new Block(
@@ -48,11 +67,11 @@ namespace TestHarness.FunctionApp
                             JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pingReference})
                         }
                     },
-                    new ICommand[] { },
-                    new ICommand[]
+                    (await MerkleTree.CreateAsync(new ICommand[] { }, merkleTreeSaver)).Root,
+                    (await MerkleTree.CreateAsync(new ICommand[]
                     {
                         new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Init")))
-                    },
+                    }, merkleTreeSaver)).Root,
                     new Dictionary<Guid, (string, string[])>
                     {
                         {pongReference, (typeof(ChainAgentPong).FullName! + ".Run", new[] {typeof(string).FullName!})},
@@ -60,29 +79,11 @@ namespace TestHarness.FunctionApp
                     }))}
             };
 
-            var self = new Peer(new byte[0]);
-            var slotGossipsStream = "DummyStream";
-            var hashRegistryStream = typeof(HashRegistryStream).FullName! + ".Run";
-            var hashRegistryWorker = typeof(HashRegistryWorker).FullName! + ".Run";
-            var outsideGossipsStream = "DummyStream";
-            var outsideQueriesStream = "DummyStream";
-
-            var mode = Environment.GetEnvironmentVariable("ApocryphEnvironment");
-            if (mode == "ipfs")
-            {
-                self = await context.CallWorkerAsync<Peer>("Apocryph.Runtime.FunctionApp.SelfPeerWorker.Run", new { }, default);
-                slotGossipsStream = "Apocryph.Runtime.FunctionApp.IpfsSlotGossipStream.Run";
-                hashRegistryStream = "Apocryph.Runtime.FunctionApp.HashRegistryStream.Run";
-                hashRegistryWorker = "Apocryph.Runtime.FunctionApp.HashRegistryWorker.Run";
-                outsideGossipsStream = "Apocryph.Runtime.FunctionApp.IpfsGossipStream.Run";
-                outsideQueriesStream = "Apocryph.Runtime.FunctionApp.IpfsQueryStream.Run";
-            }
-
             await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream.Run", new
             {
                 self,
-                hashRegistryStream,
-                hashRegistryWorker,
+                hashRegistryWriter,
+                hashRegistryReader,
                 outsideGossipsStream,
                 outsideQueriesStream,
                 slotGossipsStream,

@@ -17,7 +17,7 @@ namespace Apocryph.Runtime.FunctionApp
     public class ValidatorStream
     {
         private Dictionary<Hash, Task<bool>> _validatedBlocks = new Dictionary<Hash, Task<bool>>();
-        private Func<Hash, Task<Block>>? _hashRegistryWorker;
+        private Func<Hash, Task<Block>>? _hashRegistryReader;
         private IAsyncCollector<Message<Hash>>? _output;
         private Node? _node;
         private Validator? _validator;
@@ -29,17 +29,22 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("consensus")] IAsyncEnumerable<Message<Hash>> consensus,
             [Perper("filter")] IAsyncEnumerable<Hash> filter,
             [Perper("queries")] IAsyncEnumerable<Query<Hash>> queries,
-            [Perper("hashRegistryWorker")] string hashRegistryWorker,
+            [Perper("hashRegistryWriter")] string hashRegistryWriter,
+            [Perper("hashRegistryReader")] string hashRegistryReader,
             [Perper("output")] IAsyncCollector<Message<Hash>> output,
             CancellationToken cancellationToken)
         {
             _output = output;
             _node = node;
-            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
+            _hashRegistryReader = hash => context.CallWorkerAsync<Block>(hashRegistryReader, new { hash, type = typeof(Block).AssemblyQualifiedName }, cancellationToken);
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _validator = new Validator(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>());
+            _validator = new Validator(
+                executor,
+                hash => context.CallWorkerAsync<object>(hashRegistryReader, new { hash, type = typeof(ICommand).AssemblyQualifiedName, allowMerkleNode = true }, cancellationToken),
+                value => context.CallWorkerAsync<bool>(hashRegistryWriter, new { value }, cancellationToken),
+                _node!.ChainId, chainData.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>());
 
             await TaskHelper.WhenAllOrFail(
                 HandleFilter(filter, cancellationToken),
@@ -57,8 +62,8 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter.WithCancellation(cancellationToken))
             {
-                var block = await _hashRegistryWorker!(hash);
-                _validator!.AddConfirmedBlock(block!);
+                var block = await _hashRegistryReader!(hash);
+                await _validator!.AddConfirmedBlock(block!);
             }
         }
 
@@ -69,7 +74,7 @@ namespace Apocryph.Runtime.FunctionApp
                 if (message.Type != MessageType.Proposed) continue;
 
                 var hash = message.Value;
-                var block = await _hashRegistryWorker!(hash);
+                var block = await _hashRegistryReader!(hash);
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
                     _validatedBlocks[hash] = Validate(context, _node!, block!);
@@ -79,7 +84,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (valid)
                 {
-                    _validator!.AddConfirmedBlock(block!);
+                    await _validator!.AddConfirmedBlock(block!);
                 }
 
                 await _output!.AddAsync(new Message<Hash>(hash, valid ? MessageType.Valid : MessageType.Invalid), cancellationToken);
@@ -96,7 +101,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = query.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = await _hashRegistryWorker!(hash);
+                    var block = await _hashRegistryReader!(hash);
                     _validatedBlocks[hash] = Validate(context, _node, block!);
                 }
             }

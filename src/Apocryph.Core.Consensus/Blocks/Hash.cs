@@ -32,6 +32,10 @@ namespace Apocryph.Core.Consensus.Blocks
 
         public override int GetHashCode()
         {
+            if (Value == null)
+            {
+                return 0;
+            }
             var hash = new HashCode();
             Array.ForEach(Value, hash.Add);
             return hash.ToHashCode();
