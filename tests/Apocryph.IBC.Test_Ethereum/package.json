@@ -1,0 +1,11 @@
+{
+  "name": "Apocryph.IBC.Test_Ethereum",
+  "version": "0.0.0",
+  "description": "",
+  "dependencies": {
+    "ethereumjs-util": "^7.0.7"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "author": ""
+}
