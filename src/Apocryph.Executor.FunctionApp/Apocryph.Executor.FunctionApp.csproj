@@ -18,7 +18,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.5" />
     <PackageReference Include="System.Linq.Async" Version="4.1.1" />
-    <PackageReference Include="Perper.WebJobs.Extensions" Version="0.6.0-alpha7" />
+    <ProjectReference Include="../../perper/functions/runtime/src/Perper.WebJobs.Extensions/Perper.WebJobs.Extensions.csproj" />
   </ItemGroup>
 
 </Project>
