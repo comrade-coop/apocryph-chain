@@ -4,6 +4,11 @@ using Apocryph.Ipfs;
 
 namespace Apocryph.KoTH
 {
+    public class KoTHConstants
+    {
+        public static string PubSubPath = "koth";
+    }
+
     public class KoTHState
     {
         public Slot?[] Slots { get; private set; }

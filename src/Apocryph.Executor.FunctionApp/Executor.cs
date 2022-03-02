@@ -16,11 +16,6 @@ namespace Apocryph.Executor.FunctionApp
             _state = state;
         }
 
-        [FunctionName("Apocryph-Executor")]
-        public void Start([PerperTrigger] object? input)
-        {
-        }
-
         [FunctionName("Register")]
         public Task Register([PerperTrigger] (Hash<string> agentCodeHash, IAgent handlerAgent, string handlerFunction) input)
         {

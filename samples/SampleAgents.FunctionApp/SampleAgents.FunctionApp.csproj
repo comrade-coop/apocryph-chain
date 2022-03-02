@@ -23,4 +23,10 @@
     <ProjectReference Include="../../perper/functions/runtime/src/Perper.WebJobs.Extensions/Perper.WebJobs.Extensions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="host.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

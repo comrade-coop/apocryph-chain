@@ -9,6 +9,8 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.Consensus.Dummy.FunctionApp
 {
+
+
     public class DummyConsensus
     {
         [FunctionName("Apocryph-DummyConsensus")]

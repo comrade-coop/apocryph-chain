@@ -9,6 +9,12 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.Routing.FunctionApp
 {
+    public class Init
+    {
+
+    }
+
+
     public static class RouterOutput
     {
         [FunctionName("RouterOutput")]

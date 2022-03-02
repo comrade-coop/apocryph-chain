@@ -1,3 +1,6 @@
 [submodule "perper"]
 	path = perper
 	url = https://github.com/obecto/perper.git
+[submodule "perper2"]
+	path = perper2
+	url = https://github.com/obecto/perper.git

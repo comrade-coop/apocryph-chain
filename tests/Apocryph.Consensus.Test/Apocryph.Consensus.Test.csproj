@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <LangVersion>8</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -12,13 +12,11 @@
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="coverlet.collector" Version="1.2.0" />
-    <ProjectReference Include="../../perper/functions/runtime/src/Perper.WebJobs.Extensions/Perper.WebJobs.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Apocryph.Consensus.Dummy.Agent\Apocryph.Consensus.Dummy.Agent.csproj" />
     <ProjectReference Include="..\..\src\Apocryph.Consensus\Apocryph.Consensus.csproj" />
-    <ProjectReference Include="..\..\src\Apocryph.Consensus.Dummy.FunctionApp\Apocryph.Consensus.Dummy.FunctionApp.csproj" />
-    <ProjectReference Include="..\Apocryph.Executor.Test\Apocryph.Executor.Test.csproj" />
   </ItemGroup>
 
 </Project>
