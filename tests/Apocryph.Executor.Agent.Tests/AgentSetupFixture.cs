@@ -1,8 +1,11 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Apache.Ignite.Core.Binary;
+using Apocryph.Consensus;
 using NUnit.Framework;
 using Perper.Application;
 using Perper.Extensions;
+using Perper.Protocol;
 
 namespace Apocryph.Executor.Agent.Tests
 {
@@ -13,6 +16,9 @@ namespace Apocryph.Executor.Agent.Tests
         public void OneTimeSetup()
         {
             var stubAssembly =  typeof(AgentSetupFixture).Assembly;
+            PerperBinaryConfigurations.TypeConfigurationsExtensions.Add(new BinaryTypeConfiguration(typeof(AgentMessage)));
+            PerperBinaryConfigurations.TypeConfigurationsExtensions.Add(new BinaryTypeConfiguration(typeof(AgentReference)));
+
             new PerperStartup("ExecutorTestsStub")
                 .DiscoverHandlersFromAssembly(stubAssembly, typeof(Apocryph.Executor.Agent.Tests.Agents.StubAgent.Calls.Startup).Namespace!)
                 .RunAsync();

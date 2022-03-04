@@ -18,7 +18,7 @@ namespace Apocryph.Executor.Agent.Tests
     {
         private static Hash<string> codeHash = null!;
 
-        [Test, Order(1)]
+        [Test]
         public async Task Register_Should_Pass()
         {
             var hashResolver = new FakeHashResolver();
@@ -50,7 +50,7 @@ namespace Apocryph.Executor.Agent.Tests
             }, null);
         }
 
-        [Test, Order(2)]
+        [Test]
         public async Task Execute_Should_Pass()
         {
             var hashResolver = new FakeHashResolver();
@@ -58,26 +58,33 @@ namespace Apocryph.Executor.Agent.Tests
             var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashResolver, "-", null, 1);
             var chainId = await hashResolver.StoreAsync(chain);
             var agentStates = await chain.GenesisState.AgentStates.EnumerateItems(hashResolver).ToDictionaryAsync(x => x.Nonce, x => x);
-            var outputMessages = new List<Message>();
+            var inputMessage = inputMessages.First();
+            var inputState = agentStates[0];//inputMessage.Target.AgentNonce];
 
-            foreach (var inputMessage in inputMessages)
+            PerperAgent agentRef = null!;
+            ExecutionContext.Run(Apocryph.Executor.Agent.Tests.Agents.StubAgent.Calls.Startup.ExecutionContext, _ =>
             {
-                var inputState = agentStates[inputMessage.Target.AgentNonce];
+                agentRef = PerperContext.Agent;
+            }, null);
 
-                ExecutionContext.Run(Apocryph.Executor.Agent.Calls.Startup.ExecutionContext, _ =>
-                {
-                    var (resultState, resultMessages) = PerperContext.Agent.CallAsync<(AgentState, Message[])>("Execute", chainId, inputState, inputMessage).GetAwaiter()
-                        .GetResult();
-                }, null);
+            ExecutionContext.Run(Apocryph.Executor.Agent.Calls.Startup.ExecutionContext, _ =>
+            {
+                PerperContext.Agent.CallAsync("Register", inputState.CodeHash.ToString(), agentRef, "Callback")
+                    .GetAwaiter()
+                    .GetResult();
 
-                //var (resultState, resultMessages) = await executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (chainId, inputState, inputMessage));
-                //Assert.Equal(inputState, resultState, SerializedComparer.Instance);
+            }, null);
 
-                //outputMessages.AddRange(resultMessages);
-            }
+            ExecutionContext.Run(Apocryph.Executor.Agent.Calls.Startup.ExecutionContext, _ =>
+            {
+                var (resultState, resultMessages) = PerperContext.Agent.CallAsync<(AgentState, AgentMessage[])>("Execute", chainId, inputState, inputMessage)
+                    .GetAwaiter()
+                    .GetResult();
 
+                Assert.NotNull(resultState);
+                Assert.NotNull(resultMessages);
 
-
+            }, null);
         }
     }
 }

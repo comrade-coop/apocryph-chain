@@ -5,25 +5,25 @@ using Apocryph.Ipfs.Serialization;
 
 namespace Apocryph.Consensus
 {
-    public class ReferenceData : IEquatable<ReferenceData>
+    public class AgentReferenceData : IEquatable<AgentReferenceData>
     {
         public string Type { get; private set; }
         public byte[] Data { get; private set; }
-        public Reference[] References { get; private set; }
+        public AgentReference[] References { get; private set; }
 
-        public ReferenceData(string type, byte[] data, Reference[] references)
+        public AgentReferenceData(string type, byte[] data, AgentReference[] references)
         {
             Type = type;
             Data = data;
             References = references;
         }
 
-        public static ReferenceData From(object? value, Reference[]? references = null)
+        public static AgentReferenceData From(object? value, AgentReference[]? references = null)
         {
-            return new ReferenceData(
+            return new AgentReferenceData(
                 value?.GetType()?.FullName ?? "",
                 JsonSerializer.SerializeToUtf8Bytes(value, ApocryphSerializationOptions.JsonSerializerOptions),
-                references ?? new Reference[] { });
+                references ?? new AgentReference[] { });
         }
 
         public T Deserialize<T>()
@@ -33,10 +33,10 @@ namespace Apocryph.Consensus
 
         public override bool Equals(object? other)
         {
-            return other is ReferenceData otherReferenceData && Equals(otherReferenceData);
+            return other is AgentReferenceData otherReferenceData && Equals(otherReferenceData);
         }
 
-        public bool Equals(ReferenceData? other)
+        public bool Equals(AgentReferenceData? other)
         {
             return other != null && Type.Equals(other.Type) && Data.SequenceEqual(other.Data) && References.SequenceEqual(other.References);
         }

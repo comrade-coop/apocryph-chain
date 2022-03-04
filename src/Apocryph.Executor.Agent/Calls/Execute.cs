@@ -9,13 +9,13 @@ namespace Apocryph.Executor.Agent.Calls;
 [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
 public static class Execute
 {
-    public static async Task<(AgentState, Message[])> RunAsync(Hash<Chain> chain, AgentState agentState, Message message)
+    public static async Task<(AgentState, AgentMessage[])> RunAsync(Hash<Chain> chainId, AgentState agentState, AgentMessage agentMessage)
     {
         var (handlerAgent, handlerFunction) = await PerperState.GetOrDefaultAsync<(PerperAgent, string)>(agentState.CodeHash.ToString());
 
         if (handlerAgent != null && handlerFunction != null)
         {
-            return await handlerAgent.CallAsync<(AgentState, Message[])>(handlerFunction, (chain, agentState, message));
+            return await handlerAgent.CallAsync<(AgentState, AgentMessage[])>(handlerFunction, chainId, agentState, agentMessage);
         }
 
         return (default, default);

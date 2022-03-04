@@ -24,11 +24,11 @@ namespace Apocryph.Executor.FunctionApp
         }
 
         [FunctionName("Execute")]
-        public async Task<(AgentState, Message[])> Execute([PerperTrigger] (Hash<Chain> chain, AgentState agent, Message message) input)
+        public async Task<(AgentState, AgentMessage[])> Execute([PerperTrigger] (Hash<Chain> chain, AgentState agent, AgentMessage message) input)
         {
             var key = $"{input.agent.CodeHash}";
             var (handlerAgent, handlerFunction) = await _state.GetValue<(IAgent, string)>(key, () => default!);
-            return await handlerAgent.CallFunctionAsync<(AgentState, Message[])>(handlerFunction, (input.chain, input.agent, input.message));
+            return await handlerAgent.CallFunctionAsync<(AgentState, AgentMessage[])>(handlerFunction, (input.chain, input.agent, input.message));
         }
     }
 }
