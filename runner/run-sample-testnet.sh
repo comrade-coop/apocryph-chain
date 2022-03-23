@@ -114,7 +114,7 @@ function configure_ipfs # instance ipfsport
   run_command "$INSTANCE-IPFS" . "ipfs config --json Experimental.Libp2pStreamMounting true"
   run_command "$INSTANCE-IPFS" . "ipfs config Addresses.API /ip4/127.0.0.1/tcp/$IPFS_PORT"
   run_command "$INSTANCE-IPFS" . "ipfs config Pubsub.Router floodsub"
-  run_command "$INSTANCE-IPFS" . "ipfs config --json Addresses.Swarm [\\\"/ip4/127.0.0.1/tcp/$SWARM_PORT\\\"]"
+  run_command "$INSTANCE-IPFS" . "ipfs config --json Addresses.Swarm \[\\\"/ip4/127.0.0.1/tcp/$SWARM_PORT\\\"\]"
 
   if [ ! $DRY_RUN ]; then
     IPFS_PEERS[$INSTANCE]="/ip4/127.0.0.1/tcp/$SWARM_PORT/p2p/$(ipfs config Identity.PeerID)"
