@@ -24,8 +24,8 @@ namespace SampleAgents.FunctionApp
             await executorAgent.CallActionAsync("Register", (Hash.From("AgentTwo"), context.Agent, "AgentTwo"));
 
             var agentStates = new[] {
-                new AgentState(0, ReferenceData.From(new AgentOne.AgentOneState()), Hash.From("AgentOne")),
-                new AgentState(1, ReferenceData.From(new AgentTwo.AgentTwoState()), Hash.From("AgentTwo"))
+                new AgentState(0, AgentReferenceData.From(new AgentOne.AgentOneState()), Hash.From("AgentOne")),
+                new AgentState(1, AgentReferenceData.From(new AgentTwo.AgentTwoState()), Hash.From("AgentTwo"))
             };
 
             var agentStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, agentStates, 2);
