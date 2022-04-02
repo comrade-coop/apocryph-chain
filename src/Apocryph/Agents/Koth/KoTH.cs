@@ -10,28 +10,48 @@ namespace Apocryph.Agents.Koth;
 /// <summary>
 /// KoTH Agent
 /// </summary>
-public class KoTH : DependencyAgent
+// ReSharper disable once InconsistentNaming
+public class KoTH
 {
-    //private readonly ILogger _logger;
-    //private readonly IHashResolver _hashResolver;
-    //private readonly IPeerConnector _peerConnector;
-    
     public static string PubSubPath = "koth";
+    
+    private readonly IPerperContext _context;
+    private readonly IHashResolver _hashResolver;
+    private readonly IPeerConnector _peerConnector;
 
-    /*public KoTH(ILogger logger, IHashResolver hashResolver, IPeerConnector peerConnector)
+    // ReSharper disable once InconsistentNaming
+    private PerperStream KoTHProcessorStream
     {
-        _logger = logger;
+        get =>
+            _context.CurrentState
+                .GetOrDefaultAsync<PerperStream>("KoTHProcessorStream")
+                .GetAwaiter()
+                .GetResult();
+        
+        set => _context.CurrentState.SetAsync("KoTHProcessorStream", value)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+    
+    public KoTH(IPerperContext context, IHashResolver hashResolver, IPeerConnector peerConnector)
+    {
+        _context = context;
         _hashResolver = hashResolver;
         _peerConnector = peerConnector;
-    }*/
-
+    }
+    
     /// <summary>
     /// Starts up the Agent
     /// </summary>
     public async Task<PerperStream> Startup()
     {
-        var stream = await PerperContext.Stream("KoTHProcessor").Persistent().StartAsync().ConfigureAwait(false);
-        await PerperState.SetAsync("KoTHProcessor", stream.Replay()).ConfigureAwait(false);
+        var stream = KoTHProcessorStream = await PerperContext
+            .Stream("KoTHProcessor")
+            .Persistent()
+            .StartAsync()
+            .ConfigureAwait(false);
+        
         return stream;
     }
 
@@ -40,6 +60,7 @@ public class KoTH : DependencyAgent
     /// </summary>
     /// <param name="token">cancellation token</param>
     /// <returns>Task of KothStates enumerable</returns>
+    // ReSharper disable once InconsistentNaming
     public async Task<IAsyncEnumerable<KothStates>> KoTHProcessor(CancellationToken token = default)
     {
         var output = Channel.CreateUnbounded<KothStates>();
@@ -50,7 +71,7 @@ public class KoTH : DependencyAgent
         await _peerConnector.ListenPubSub<(Hash<Chain> chain, Slot slot)>(PubSubPath, async (_, message) =>
         {
             await semaphore.WaitAsync(token);
-            var chainState = await PerperState.GetOrDefaultAsync<KoTHState?>(message.chain.ToString());
+            var chainState = await _context.CurrentState.GetOrDefaultAsync<KoTHState?>(message.chain.ToString());
             if (chainState == null)
             {
                 var chainValue = await _hashResolver.RetrieveAsync(message.chain, token);
@@ -61,7 +82,7 @@ public class KoTH : DependencyAgent
             {
                 var self = await _peerConnector.Self;
                 Log.Debug("{ChainId} {SlotMap}", message.chain.ToString().Substring(0, 16), string.Join("", chainState.Slots.Select(x => x == null ? '_' : x.Peer == self ? 'X' : '.')));
-                await PerperState.SetAsync(message.chain.ToString(), chainState);
+                await _context.CurrentState.SetAsync(message.chain.ToString(), chainState);
 
                 // DEBUG: ToArray used due to in-place modifications
                 await output.Writer.WriteAsync(new KothStates(message.chain, chainState.Slots.ToArray()), token);

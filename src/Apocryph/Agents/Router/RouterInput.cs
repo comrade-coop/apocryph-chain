@@ -8,6 +8,7 @@ namespace Apocryph.Agents.Router;
 
 public partial class Routing
 {
+   
     /// <summary>
     /// RouterInput stream
     /// </summary>
@@ -17,13 +18,13 @@ public partial class Routing
     public async Task<IAsyncEnumerable<AgentMessage>> RouterInput(PerperStream calls, PerperStream subscriptions)
     {
         var output = EmptyBlock<AgentMessage>();
-        var lastSubscriptions = await PerperState.GetOrDefaultAsync("lastSubscriptions", new List<AgentReference>());
+        var lastSubscriptions = await _context.CurrentState.GetOrDefaultAsync("lastSubscriptions", new List<AgentReference>());
         var subscriptionsFromLastBlock = KeepLastBlock(lastSubscriptions);
         subscriptions.EnumerateAsync<List<AgentReference>>().ToDataflow().LinkTo(subscriptionsFromLastBlock);
 
         var subscriber = SubscriberBlock<AgentReference, AgentMessage>(async reference =>
         {
-            var (_, targetOutput) = await PerperContext.CallAsync<(string, PerperStream)>("GetChainInstance", reference.Chain);
+            var (_, targetOutput) = await _context.CurrentAgent.CallAsync<(string, PerperStream)>("GetChainInstance", reference.Chain);
             return targetOutput.Replay().EnumerateAsync<AgentMessage>().ToDataflow(); // TODO: Make sure to replay only messages newer than the subscription
         });
 

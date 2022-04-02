@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Apocryph.Ipfs;
 using Apocryph.Model;
-using Microsoft.Extensions.Logging;
 using Perper.Extensions;
 using Perper.Model;
 
@@ -10,18 +9,17 @@ namespace Apocryph.Agents.Koth;
 /// <summary>
 /// KoTH Simple Miner
 /// </summary>
-public class KoTHSimpleMiner : DependencyAgent
+// ReSharper disable once InconsistentNaming
+public class KoTHSimpleMiner
 {
-    //private readonly ILogger _logger;
-    //private readonly IHashResolver _hashResolver;
-    //private readonly IPeerConnector _peerConnector;
+    private readonly IHashResolver _hashResolver;
+    private readonly IPeerConnector _peerConnector;
 
-    /*public KoTHSimpleMiner(ILogger logger, IHashResolver hashResolver, IPeerConnector peerConnector)
+    public KoTHSimpleMiner(IHashResolver hashResolver, IPeerConnector peerConnector)
     {
-        _logger = logger;
         _hashResolver = hashResolver;
         _peerConnector = peerConnector;
-    }*/
+    }
 
     /// <summary>
     /// Call starting slot mining

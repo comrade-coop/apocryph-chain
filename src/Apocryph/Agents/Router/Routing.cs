@@ -1,7 +1,5 @@
 ﻿using Apocryph.Ipfs;
 using Apocryph.Model;
-using Apocryph.Shared;
-using Microsoft.Extensions.Logging;
 using Perper.Extensions;
 using Perper.Model;
 
@@ -10,16 +8,30 @@ namespace Apocryph.Agents.Router;
 /// <summary>
 /// Routing Agent
 /// </summary>
-public partial class Routing : DependencyAgent
+public partial class Routing
 {
-    //private readonly ILogger _logger;
-    //private readonly IHashResolver _hashResolver;
+    private readonly IPerperContext _context;
+    private readonly IHashResolver _hashResolver;
 
-    /*public Routing(ILogger logger, IHashResolver hashResolver)
+    private PerperStream CollectorStream
     {
-        _logger = logger;
+        get =>
+            _context.CurrentState
+                .GetOrDefaultAsync<PerperStream>("CollectorStream")
+                .GetAwaiter()
+                .GetResult();
+        
+        set => _context.CurrentState.SetAsync("CollectorStream", value)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+    
+    public Routing(IPerperContext context, IHashResolver hashResolver)
+    {
+        _context = context;
         _hashResolver = hashResolver;
-    }*/
+    }
 
     /// <summary>
     /// Starts up the Agent
@@ -29,9 +41,22 @@ public partial class Routing : DependencyAgent
     /// <param name="collectorStream">stream of AgentMessages</param>
     public async Task Startup(PerperStream kothStates, PerperAgent executor, PerperStream collectorStream)
     {
-        await PerperState.SetAsync("input", (kothStates, executor, collectorStream));
+        var stream = CollectorStream =
+            await PerperContext.BlankStream().StartAsync()
+                .ConfigureAwait(false);
+            
+        await _context.CurrentState.SetAsync("input", (kothStates, executor, collectorStream));
     }
 
+    /// <summary>
+    /// Appends message into collector stream
+    /// </summary>
+    /// <param name="message">Agent message</param>
+    public async Task PostMessage(AgentMessage message)
+    {
+        await CollectorStream.WriteItemAsync(message);
+    }
+    
     /// <summary>
     ///
     /// </summary>
@@ -41,7 +66,7 @@ public partial class Routing : DependencyAgent
     {
         // NOTE: Can benefit from locking
         var key = $"{chainId}";
-        var (currentCallsStreamName, currentRoutedOutput) = await PerperState.GetOrDefaultAsync<(string, PerperStream?)>(key);
+        var (currentCallsStreamName, currentRoutedOutput) = await _context.CurrentState.GetOrDefaultAsync<(string, PerperStream?)>(key);
         if (currentCallsStreamName != "" && currentRoutedOutput != null)
         {
             return (currentCallsStreamName, currentRoutedOutput);
@@ -53,9 +78,9 @@ public partial class Routing : DependencyAgent
         var publicationsStream = await PerperContext.BlankStream().StartAsync(); // for IAsyncEnumerable<AgentMessage>
         var subscriptionsStream = await PerperContext.BlankStream().StartAsync(); // for IAsyncEnumerable<List<AgentReference>>
 
-        var (kothStates, executor, _) = await PerperState.GetOrDefaultAsync<(PerperStream, PerperAgent, PerperStream)>("input");
+        var (kothStates, executor, _) = await _context.CurrentState.GetOrDefaultAsync<(PerperStream, PerperAgent, PerperStream)>("input");
 
-        var routedInput = await PerperContext.CallAsync<PerperStream>("RouterInput", callsStream, subscriptionsStream, subscriptionsStream);
+        var routedInput = await _context.CurrentAgent.CallAsync<PerperStream>("RouterInput", callsStream, subscriptionsStream, subscriptionsStream);
 
         var (_, consensusOutput) = await PerperContext.StartAgentAsync<PerperStream>(
             chain.ConsensusType, // name of consensus
@@ -66,11 +91,11 @@ public partial class Routing : DependencyAgent
             executor
         );
 
-        var task = PerperContext.CallAsync("RouterOutput", publicationsStream.Stream, consensusOutput, chainId)
+        var task = _context.CurrentAgent.CallAsync("RouterOutput", publicationsStream.Stream, consensusOutput, chainId)
             .ContinueWith(x => Console.WriteLine(x.Exception), TaskContinuationOptions.OnlyOnFaulted); // DEBUG: FakeStream does not log errors
 
         var resultValue = (callsStream.Stream, publicationsStream);
-        await PerperState.SetAsync(key, resultValue);
+        await _context.CurrentState.SetAsync(key, resultValue);
         return resultValue;
     }
 }

@@ -9,25 +9,17 @@ public partial class Routing
 {
     public async Task RouterOutput(string _, PerperStream outbox, Hash<Chain> self)
     {
-        var (_, _, collectorStream) = await PerperState.GetOrDefaultAsync<(PerperStream, PerperAgent, PerperStream)>("input");
-        
         await foreach (var message in outbox.EnumerateAsync<AgentMessage>())
         {
             if (message.Target.Chain == self && message.Target.AgentNonce < 0)
             {
-                await PerperContext.WriteToBlankStreamAsync(collectorStream, message);
+                await CollectorStream.WriteItemAsync(message);
             }
             else
             {
-                await PerperContext.CallAsync("PostMessage", message);
+                await _context.CurrentAgent.CallAsync<(string, PerperStream)>("GetChainInstance", message.Target.Chain);
+                await CollectorStream.WriteItemAsync(message);
             }
         }
-    }
-
-    public async Task PostMessage(AgentMessage message)
-    {
-        var (_, _, collectorStream) = await PerperState.GetOrDefaultAsync<(PerperStream, PerperAgent, PerperStream)>("input");
-
-        await PerperContext.WriteToBlankStreamAsync(collectorStream, message, true);
     }
 }

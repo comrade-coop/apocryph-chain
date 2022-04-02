@@ -8,8 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\perper2\agent\dotnet\src\Perper\Perper.csproj" />
+      <ProjectReference Include="..\..\perper\agent\dotnet\src\Perper\Perper.csproj" />
       <ProjectReference Include="..\..\src\Apocryph\Apocryph.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Serilog" Version="2.10.0" />
     </ItemGroup>
 
 </Project>

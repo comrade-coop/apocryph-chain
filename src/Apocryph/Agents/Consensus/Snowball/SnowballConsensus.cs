@@ -8,19 +8,33 @@ using Serilog;
 
 namespace Apocryph.Agents.Consensus.Snowball
 {
-    public class SnowballConsensus : DependencyAgent
+    public class SnowballConsensus
     {
-        //private readonly ILogger _logger;
-        //private readonly IHashResolver _hashResolver;
-        //private readonly IPeerConnector _peerConnector;
+        private readonly IPerperContext _context;
+        private readonly IHashResolver _hashResolver;
+        private readonly IPeerConnector _peerConnector;
 
-        /*public SnowballConsensus(ILogger logger, IHashResolver hashResolver, IPeerConnector peerConnector)
+        private PerperStream ConsensusStream
         {
-            _logger = logger;
+            get =>
+                _context.CurrentState
+                    .GetOrDefaultAsync<PerperStream>("ConsensusStream")
+                    .GetAwaiter()
+                    .GetResult();
+        
+            set => _context.CurrentState.SetAsync("ConsensusStream", value)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
+        }
+    
+        public SnowballConsensus(IPerperContext context, IHashResolver hashResolver, IPeerConnector peerConnector)
+        {
+            _context = context;
             _hashResolver = hashResolver;
             _peerConnector = peerConnector;
-        }*/
-
+        }
+       
         /// <summary>
         /// Starts up the Agent
         /// </summary>
@@ -33,9 +47,21 @@ namespace Apocryph.Agents.Consensus.Snowball
         public async Task<PerperStream> StartupAsync(PerperStream messages, string subscriptionsStreamName, Chain chain, PerperStream kothStates, PerperAgent executor, CancellationToken cancellationToken = default)
         {
             var self = await _hashResolver.StoreAsync(chain, cancellationToken);
-            var messagePoolTask = PerperContext.Stream("MessagePool").StartAsync(messages, self);
-            var kothTask = PerperContext.Stream("KothProcessor").StartAsync(self, kothStates);
-            return await PerperContext.Stream("SnowballStream").Action().StartAsync(self, executor, cancellationToken);
+
+            var messagePoolTask = PerperContext.Stream("MessagePool")
+                .StartAsync(messages, self)
+                .ConfigureAwait(false);
+            
+            var kothTask = PerperContext.Stream("KothProcessor")
+                .StartAsync(self, kothStates)
+                .ConfigureAwait(false);
+
+            var consensusStream = ConsensusStream =
+                ConsensusStream = await PerperContext.Stream("MessagePool")
+                    .StartAsync(messages, subscriptionsStreamName, chain, kothStates, executor)
+                    .ConfigureAwait(false);
+
+            return consensusStream;
         }
 
         /// <summary>
@@ -58,14 +84,17 @@ namespace Apocryph.Agents.Consensus.Snowball
 
             await _peerConnector.ListenQuery<Query, Query>(queryPath, async (peer, request) =>
             {
-                var currentRound = await PerperState.GetOrDefaultAsync<int>("currentRound");
-                // NOTE: Should be using some locking here
-                var snowballState = await PerperState.GetOrDefaultAsync<SnowballState>($"snowballState-{request.Round}");
+                var currentRound = await  _context.CurrentState.GetOrDefaultAsync<int>("currentRound");
+                var snowballState = await  _context.CurrentState.GetOrDefaultAsync<SnowballState>($"snowballState-{request.Round}");
+                
                 snowballState.ProcessQuery(request.Value);
+                
                 var result = new Query(currentRound < request.Round ? null : snowballState.CurrentValue!, request.Round);
-                await PerperState.SetAsync($"snowballState-{request.Round}", snowballState);
+                
+                await  _context.CurrentState.SetAsync($"snowballState-{request.Round}", snowballState);
 
                 return result;
+                
             }, cancellationToken);
 
             async Task<(ChainState, IMerkleTree<AgentMessage>)> ExecuteBlock(ChainState chainState, IMerkleTree<AgentMessage> inputMessages)
@@ -97,7 +126,7 @@ namespace Apocryph.Agents.Consensus.Snowball
                     return false;
                 }
 
-                var inputMessagesSet = await PerperState.GetOrDefaultAsync<List<AgentMessage>>("messagePool");
+                var inputMessagesSet = await _context.CurrentState.GetOrDefaultAsync<List<AgentMessage>>("messagePool");
                 await foreach (var inputMessage in block.InputMessages.EnumerateItems(_hashResolver).WithCancellation(cancellationToken))
                 {
                     if (!inputMessagesSet.Remove(inputMessage))
@@ -113,9 +142,9 @@ namespace Apocryph.Agents.Consensus.Snowball
             async Task<Block?> ProposeBlock(Hash<Block> previousHash)
             {
                 var previous = await _hashResolver.RetrieveAsync(previousHash, cancellationToken);
-                var inputMessagesList = (await PerperState.GetOrDefaultAsync<List<AgentMessage>>("messagePool")).ToArray();
+                var inputMessagesList = (await _context.CurrentState.GetOrDefaultAsync<List<AgentMessage>>("messagePool")).ToArray();
 
-                if (inputMessagesList.Length == 0 && await PerperState.GetOrDefaultAsync<bool>("finished"))
+                if (inputMessagesList.Length == 0 && await _context.CurrentState.GetOrDefaultAsync<bool>("finished"))
                 {
                     return null; // DEBUG: Used for testing purposes mainly
                 }
@@ -127,36 +156,36 @@ namespace Apocryph.Agents.Consensus.Snowball
                 return new Block(previousHash, inputMessages, outputMessages, outputStates);
             }
 
-            var currentRound = await PerperState.GetOrDefaultAsync<int>("currentRound");
+            var currentRound = await _context.CurrentState.GetOrDefaultAsync<int>("currentRound");
 
             // NOTE: Might benefit from locking
             while (true)
             {
                 IEnumerable<Task<Query>> replyTasks;
                 {
-                    var kothPeers = await PerperState.GetOrDefaultAsync<Peer[]>("kothPeers");
+                    var kothPeers = await _context.CurrentState.GetOrDefaultAsync<Peer[]>("kothPeers");
                     if (kothPeers.Length == 0)
                     {
                         await Task.Delay(100, cancellationToken);
                         continue;
                     }
 
-                    var snowball = await PerperState.GetOrDefaultAsync<SnowballState>($"snowballState-{currentRound}");
+                    var snowball = await _context.CurrentState.GetOrDefaultAsync<SnowballState>($"snowballState-{currentRound}");
                     if (snowball.CurrentValue == null)
                     {
                         // NOTE: Can have a mode to sync to current state first for extra speed
                         // NOTE: Can lower CPU usage pressure by calculating proposer order from (previousHash, currentRound)
                         if (kothPeers.Contains(selfPeer))
                         {
-                            var previousHash = await PerperState.GetOrDefaultAsync<Hash<Block>>("lastBlock", genesis);
+                            var previousHash = await _context.CurrentState.GetOrDefaultAsync("lastBlock", genesis);
                             var newBlock = await ProposeBlock(previousHash);
                             if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
 
                             var newBlockHash = await _hashResolver.StoreAsync(newBlock, cancellationToken);
 
-                            snowball = await PerperState.GetOrDefaultAsync<SnowballState>($"snowballState-{currentRound}");
+                            snowball = await _context.CurrentState.GetOrDefaultAsync<SnowballState>($"snowballState-{currentRound}");
                             snowball.ProcessQuery(newBlockHash);
-                            await PerperState.SetAsync($"snowballState-{currentRound}", snowball);
+                            await _context.CurrentState.SetAsync($"snowballState-{currentRound}", snowball);
                         }
 
                         await Task.Delay(100, cancellationToken);
@@ -171,7 +200,7 @@ namespace Apocryph.Agents.Consensus.Snowball
 
                 Hash<Block>? finishedHash = null;
                 {
-                    var snowball = await PerperState.GetOrDefaultAsync<SnowballState>($"snowballState-{currentRound}");
+                    var snowball = await _context.CurrentState.GetOrDefaultAsync<SnowballState>($"snowballState-{currentRound}");
                     var finished = snowball.ProcessResponses(parameters, responses);
 
                     if (finished)
@@ -179,35 +208,35 @@ namespace Apocryph.Agents.Consensus.Snowball
                         finishedHash = snowball.CurrentValue;
                     }
 
-                    await PerperState.SetAsync($"snowballState-{currentRound}", snowball);
+                    await _context.CurrentState.SetAsync($"snowballState-{currentRound}", snowball);
                 }
 
                 if (finishedHash != null)
                 {
                     var finishedBlock = await _hashResolver.RetrieveAsync(finishedHash, cancellationToken);
 
-                    var previousHash = await PerperState.GetOrDefaultAsync("lastBlock", genesis);
+                    var previousHash = await _context.CurrentState.GetOrDefaultAsync("lastBlock", genesis);
                     if (await ValidateBlock(finishedBlock, previousHash))
                     {
                         previousHash = finishedHash;
-                        await PerperState.SetAsync("lastBlock", previousHash);
+                        await _context.CurrentState.SetAsync("lastBlock", previousHash);
 
                         await foreach (var outputMessage in finishedBlock.OutputMessages.EnumerateItems(_hashResolver).WithCancellation(cancellationToken))
                         {
                             yield return outputMessage;
                         }
 
-                        var messagePool = await PerperState.GetOrDefaultAsync<List<AgentMessage>>("messagePool");
+                        var messagePool = await _context.CurrentState.GetOrDefaultAsync<List<AgentMessage>>("messagePool");
                         await foreach (var processedMessage in finishedBlock.InputMessages.EnumerateItems(_hashResolver).WithCancellation(cancellationToken))
                         {
                             messagePool.Remove(processedMessage);
                         }
-                        await PerperState.SetAsync("messagePool", messagePool);
+                        await _context.CurrentState.SetAsync("messagePool", messagePool);
                     }
 
                     Log.Debug("Finished round {CurrentRound}; block: {PreviousHash}", currentRound, previousHash.ToString().Substring(0, 16));
 
-                    await PerperState.SetAsync("currentRound", ++currentRound);
+                    await _context.CurrentState.SetAsync("currentRound", ++currentRound);
                 }
             }
         }
@@ -224,12 +253,12 @@ namespace Apocryph.Agents.Consensus.Snowball
                 if (!message.Target.AllowedMessageTypes.Contains(message.Data.Type)) // NOTE: Should probably get handed by routing/execution instead
                     continue;
 
-                var messagePool = await PerperState.GetOrDefaultAsync<List<AgentMessage>>("messagePool");
+                var messagePool = await _context.CurrentState.GetOrDefaultAsync<List<AgentMessage>>("messagePool");
                 messagePool.Add(message);
-                await PerperState.SetAsync("messagePool", messagePool);
+                await _context.CurrentState.SetAsync("messagePool", messagePool);
             }
 
-            await PerperState.SetAsync("finished", true); // DEBUG: Used for testing purposes mainly
+            await _context.CurrentState.SetAsync("finished", true); // DEBUG: Used for testing purposes mainly
         }
 
         /// <summary>
@@ -247,7 +276,7 @@ namespace Apocryph.Agents.Consensus.Snowball
 
                 var peers = _slot.Where(x => x != null).Select(x => x!.Peer).ToArray();
 
-                await PerperState.SetAsync("kothPeers", peers);
+                await _context.CurrentState.SetAsync("kothPeers", peers);
             }
         }
     }

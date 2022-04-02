@@ -1,0 +1,12 @@
+version: '3.4'
+
+services:
+    perper-fabric-registry:
+      container_name: perper-fabric-registry
+      image: obecto/perper-fabric:0.8.0
+      command: '-d /hatchery/perper-config.xml'
+      ports:
+      - "10800:10800" # for local debugging
+      - "40400:40400" # for local debugging
+      volumes:
+      - ./perper-config.xml:/hatchery/perper-config.xml:ro

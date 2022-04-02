@@ -2,24 +2,37 @@
 using Apocryph.Model;
 using Perper.Extensions;
 using Perper.Model;
-using Serilog;
 
 namespace Apocryph.Agents.Consensus.Local;
 
 /// <summary>
 /// Local consensus implementation. Use for development/testing purposes only.
 /// </summary>
-public class LocalConsensus : DependencyAgent
+public class LocalConsensus
 {
-    //private readonly ILogger _logger;
-    //private readonly IHashResolver _hashResolver;
+    private readonly IPerperContext _context;
+    private readonly IHashResolver _hashResolver;
 
-   /* public LocalConsensus(ILogger logger, IHashResolver hashResolver)
+    private PerperStream ConsensusStream
     {
-        _logger = logger;
+        get =>
+            _context.CurrentState
+                .GetOrDefaultAsync<PerperStream>("ConsensusStream")
+                .GetAwaiter()
+                .GetResult();
+        
+        set => _context.CurrentState.SetAsync("ConsensusStream", value)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+    
+    public LocalConsensus(IPerperContext context, IHashResolver hashResolver)
+    {
+        _context = context;
         _hashResolver = hashResolver;
-    }*/
-
+    }
+    
     /// <summary>
     /// Starts up the Agent
     /// </summary>
@@ -31,8 +44,12 @@ public class LocalConsensus : DependencyAgent
     /// <returns>stream of AgentMessages</returns>
     public async Task<PerperStream> StartupAsync(PerperStream messages, string subscriptionsStreamName, Chain chain, PerperStream kothStates, PerperAgent executor)
     {
-        var stream = await PerperContext.Stream("LocalStream").Persistent().StartAsync(messages, subscriptionsStreamName, chain, kothStates, executor).ConfigureAwait(false);
-        await PerperState.SetAsync("LocalStream", stream.Replay()).ConfigureAwait(false);
+        var stream = ConsensusStream =
+            await PerperContext.Stream("LocalConsensusStream")
+                .Persistent()
+                .StartAsync(messages, subscriptionsStreamName, chain, kothStates, executor)
+                .ConfigureAwait(false);
+        
         return stream;
     }
 
@@ -45,7 +62,7 @@ public class LocalConsensus : DependencyAgent
     /// <param name="kothStates">stream of kothStates</param>
     /// <param name="executor">executing agent</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<AgentMessage> LocalStream(PerperStream messages, string subscriptionsStreamName, Chain chain, PerperStream kothStates, PerperAgent executor)
+    public async IAsyncEnumerable<AgentMessage> LocalConsensusStream(PerperStream messages, string subscriptionsStreamName, Chain chain, PerperStream kothStates, PerperAgent executor)
     {
         var agentStates = await chain.GenesisState
             .AgentStates
