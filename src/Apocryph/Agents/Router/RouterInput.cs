@@ -1,14 +1,12 @@
 ﻿using System.Threading.Tasks.Dataflow;
 using Apocryph.Model;
 using Apocryph.Shared;
-using Perper.Extensions;
 using Perper.Model;
 
 namespace Apocryph.Agents.Router;
 
 public partial class Routing
 {
-   
     /// <summary>
     /// RouterInput stream
     /// </summary>
@@ -18,20 +16,21 @@ public partial class Routing
     public async Task<IAsyncEnumerable<AgentMessage>> RouterInput(PerperStream calls, PerperStream subscriptions)
     {
         var output = EmptyBlock<AgentMessage>();
-        var lastSubscriptions = await _context.CurrentState.GetOrDefaultAsync("lastSubscriptions", new List<AgentReference>());
+        var lastSubscriptions = await _routingAdapter.GetLastSubscriptions();
         var subscriptionsFromLastBlock = KeepLastBlock(lastSubscriptions);
-        subscriptions.EnumerateAsync<List<AgentReference>>().ToDataflow().LinkTo(subscriptionsFromLastBlock);
+
+        _routingAdapter.EnumerateSubscriptions(subscriptions).ToDataflow().LinkTo(subscriptionsFromLastBlock);
 
         var subscriber = SubscriberBlock<AgentReference, AgentMessage>(async reference =>
         {
-            var (_, targetOutput) = await _context.CurrentAgent.CallAsync<(string, PerperStream)>("GetChainInstance", reference.Chain);
-            return targetOutput.Replay().EnumerateAsync<AgentMessage>().ToDataflow(); // TODO: Make sure to replay only messages newer than the subscription
+            var (_, targetOutput) = await _routingAdapter.GetChainInstance(reference.Chain);
+            return _routingAdapter.EnumerateTargetOutput(targetOutput.Replay()).ToDataflow();  // TODO: Make sure to replay only messages newer than the subscription
         });
 
         subscriptionsFromLastBlock.LinkTo(subscriber);
         subscriber.LinkTo(output);
-
-        calls.EnumerateAsync<AgentMessage>().ToDataflow().LinkTo(output);
+        
+        _routingAdapter.EnumerateCalls(calls).ToDataflow().LinkTo(output);
 
         return output.ToAsyncEnumerable();
     }

@@ -1,6 +1,5 @@
 ﻿using Apocryph.Ipfs;
 using Apocryph.Model;
-using Perper.Extensions;
 using Perper.Model;
 
 namespace Apocryph.Agents.Consensus.Local;
@@ -10,26 +9,14 @@ namespace Apocryph.Agents.Consensus.Local;
 /// </summary>
 public class LocalConsensus
 {
-    private readonly IPerperContext _context;
+    private readonly ILocalConsensusAdapter _localConsensusAdapter;
     private readonly IHashResolver _hashResolver;
-
-    private PerperStream ConsensusStream
-    {
-        get =>
-            _context.CurrentState
-                .GetOrDefaultAsync<PerperStream>("ConsensusStream")
-                .GetAwaiter()
-                .GetResult();
-        
-        set => _context.CurrentState.SetAsync("ConsensusStream", value)
-            .ConfigureAwait(false)
-            .GetAwaiter()
-            .GetResult();
-    }
     
-    public LocalConsensus(IPerperContext context, IHashResolver hashResolver)
+    public LocalConsensus(
+        ILocalConsensusAdapter localConsensusAdapter,
+        IHashResolver hashResolver)
     {
-        _context = context;
+        _localConsensusAdapter = localConsensusAdapter;
         _hashResolver = hashResolver;
     }
     
@@ -44,11 +31,12 @@ public class LocalConsensus
     /// <returns>stream of AgentMessages</returns>
     public async Task<PerperStream> StartupAsync(PerperStream messages, string subscriptionsStreamName, Chain chain, PerperStream kothStates, PerperAgent executor)
     {
-        var stream = ConsensusStream =
-            await PerperContext.Stream("LocalConsensusStream")
-                .Persistent()
-                .StartAsync(messages, subscriptionsStreamName, chain, kothStates, executor)
-                .ConfigureAwait(false);
+        var stream = _localConsensusAdapter.ConsensusStream = await _localConsensusAdapter.StartLocalConsensusStream(
+                messages, 
+                subscriptionsStreamName,
+                chain, 
+                kothStates,
+                executor);
         
         return stream;
     }
@@ -71,13 +59,14 @@ public class LocalConsensus
 
         var self = Hash.From(chain);
 
-        await foreach (var message in messages.EnumerateAsync<AgentMessage>())
+        await foreach (var message in _localConsensusAdapter.EnumerateMessages(messages))
         {
             if (!message.Target.AllowedMessageTypes.Contains(message.Data.Type)) // NOTE: Should probably get handed by routing/execution instead
                 continue;
 
             var state = agentStates[message.Target.AgentNonce];
-            var (newState, resultMessages) = await executor.CallAsync<(AgentState, AgentMessage[])>("Execute", self, state, message);
+
+            var (newState, resultMessages) = await _localConsensusAdapter.ExecutorAgentExecuteCall(executor, self, state, message);
 
             agentStates[message.Target.AgentNonce] = newState;
 

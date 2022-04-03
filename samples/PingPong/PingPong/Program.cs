@@ -3,7 +3,6 @@ using Apocryph.Agents.Consensus.Snowball;
 using Apocryph.Agents.Executor;
 using Apocryph.Agents.Koth;
 using Apocryph.Agents.Router;
-using PingPong;
 using Serilog;
 using Perper.Application;
 using PingPong.Agents;
@@ -17,7 +16,10 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices(services =>
     {
-        services.AddHostedService<Worker>();
+        services.AddTransient<IExecutorAdapter>();
+        services.AddTransient<ILocalConsensusAdapter>();
+        services.AddTransient<IKoTHAdapter>();
+        services.AddTransient<IRoutingAdapter>();
     })
     .ConfigurePerper(builder =>
     {

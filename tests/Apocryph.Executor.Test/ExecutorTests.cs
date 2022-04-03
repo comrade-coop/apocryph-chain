@@ -1,8 +1,10 @@
 using System.Collections.Generic;
-using System.Linq;
-using Apocryph.Consensus;
 using Apocryph.Ipfs.Fake;
 using Apocryph.Ipfs.Test;
+using Apocryph.Model;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
+using Moq;
+using Perper.Model;
 using Xunit;
 
 namespace Apocryph.Executor.Test
@@ -13,13 +15,18 @@ namespace Apocryph.Executor.Test
         public async void TestAgentScenario_ProducesExpectedMessages()
         {
             var hashResolver = new FakeHashResolver();
-            var executor = await ExecutorFakes.GetExecutor(ExecutorFakes.TestAgents);
+            
+            var perperContextMock = new Mock<IPerperContext>();
+            
+            var executor = new Agents.Executor.Executor(perperContextMock.Object);
+            executor.Register()
+          
             var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashResolver, "-", null, 1);
             var chainId = await hashResolver.StoreAsync(chain);
 
             var agentStates = await chain.GenesisState.AgentStates.EnumerateItems(hashResolver).ToDictionaryAsync(x => x.Nonce, x => x);
 
-            var outputMessages = new List<Message>();
+            var outputMessages = new List<AgentMessage>();
 
             foreach (var inputMessage in inputMessages)
             {

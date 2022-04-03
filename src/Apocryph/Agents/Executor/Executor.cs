@@ -1,8 +1,6 @@
 ﻿using Apocryph.Ipfs;
 using Apocryph.Model;
-using Perper.Extensions;
 using Perper.Model;
-using Serilog;
 
 namespace Apocryph.Agents.Executor;
 
@@ -11,11 +9,11 @@ namespace Apocryph.Agents.Executor;
 /// </summary>
 public class Executor
 {
-    private readonly IPerperContext _context;
+    private readonly IExecutorAdapter _executorAdapter;
 
-    public Executor(IPerperContext context)
+    public Executor(IExecutorAdapter executorAdapter)
     {
-        _context = context;
+        _executorAdapter = executorAdapter;
     }
     
     /// <summary>
@@ -27,7 +25,7 @@ public class Executor
     public async Task Register(Hash<string> agentCodeHash, PerperAgent handlerAgent, string handlerFunction)
     {
         var key = $"{agentCodeHash}";
-        await _context.CurrentState.SetAsync(key, (handlerAgent, handlerFunction));
+        await _executorAdapter.SetHandlerAgent(key, handlerAgent, handlerFunction);
         
         // Log.Debug("Called Executor.Register with args ({AgentCodeHash}, {HandlerAgent},{HandlerFunction})`", key, handlerAgent, handlerFunction);
     }
@@ -43,11 +41,11 @@ public class Executor
     {
         var key = $"{agentState.CodeHash}";
         
-        var (notNull, (handlerAgent, handlerFunction)) = await _context.CurrentState.TryGetAsync<(PerperAgent, string)>(key);
+        var (notNull, (handlerAgent, handlerFunction)) = await _executorAdapter.GetHandlerAgent(key);
         
         if (notNull)
         {
-            return await handlerAgent.CallAsync<(AgentState, AgentMessage[])>(handlerFunction, chainId, agentState, agentMessage);
+            return await _executorAdapter.HandlerAgentHandlerFunctionCall(handlerAgent, handlerFunction, chainId, agentState, agentMessage);
         }
 
         return new(null!, null!);

@@ -3,21 +3,35 @@ using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
 using Apocryph.Ipfs.MerkleTree;
+using Apocryph.Model;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
+using Moq;
+using Perper.Extensions;
+using Perper.Model;
 using Perper.WebJobs.Extensions.Fake;
 using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Executor.Test
 {
-    using Executor = Apocryph.Executor.FunctionApp.Executor;
+    // using Executor = Apocryph.Executor.FunctionApp.Executor;
 
+    /*
+    
+    
     public static class ExecutorFakes
     {
-        public static async Task<FakeAgent> GetExecutor(params (Hash<string>, Func<(Hash<Chain>, AgentState, Message), Task<(AgentState, Message[])>>)[] handlers)
+        public static async Task<PerperAgent> GetExecutor(params (Hash<string>, Func<(Hash<Chain>, AgentState, Message), Task<(AgentState, Message[])>>)[] handlers)
         {
-            var executorAgent = new FakeAgent();
-            var executor = new Executor(new FakeState());
-            var handlersAgent = new FakeAgent();
+            var perperContextMock = new Mock<IPerperContext>();
+            
+            var executor = new Agents.Executor.Executor(perperContextMock.Object);
+            
+            var executorAgent = new PerperAgent("Executor", "Executor-Instance");
+            
+            var handlersAgent =  new PerperAgent("Callback", "Callback-Instance");
 
+            executorAgent.CallAsync()
+            
             executorAgent.RegisterFunction("Register", ((Hash<string>, IAgent, string) input) => executor.Register(input));
             executorAgent.RegisterFunction("Execute", ((Hash<Chain>, AgentState, Message) input) => executor.Execute(input));
 
@@ -81,4 +95,6 @@ namespace Apocryph.Executor.Test
 
         }
     }
+    
+    */
 }

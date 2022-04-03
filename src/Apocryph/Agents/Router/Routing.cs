@@ -10,26 +10,12 @@ namespace Apocryph.Agents.Router;
 /// </summary>
 public partial class Routing
 {
-    private readonly IPerperContext _context;
+    private readonly IRoutingAdapter _routingAdapter;
     private readonly IHashResolver _hashResolver;
-
-    private PerperStream CollectorStream
+ 
+    public Routing(IRoutingAdapter routingAdapter, IHashResolver hashResolver)
     {
-        get =>
-            _context.CurrentState
-                .GetOrDefaultAsync<PerperStream>("CollectorStream")
-                .GetAwaiter()
-                .GetResult();
-        
-        set => _context.CurrentState.SetAsync("CollectorStream", value)
-            .ConfigureAwait(false)
-            .GetAwaiter()
-            .GetResult();
-    }
-    
-    public Routing(IPerperContext context, IHashResolver hashResolver)
-    {
-        _context = context;
+        _routingAdapter = routingAdapter;
         _hashResolver = hashResolver;
     }
 
@@ -41,11 +27,8 @@ public partial class Routing
     /// <param name="collectorStream">stream of AgentMessages</param>
     public async Task Startup(PerperStream kothStates, PerperAgent executor, PerperStream collectorStream)
     {
-        var stream = CollectorStream =
-            await PerperContext.BlankStream().StartAsync()
-                .ConfigureAwait(false);
-            
-        await _context.CurrentState.SetAsync("input", (kothStates, executor, collectorStream));
+        await _routingAdapter.StartCollectorStream();
+        await _routingAdapter.SetInput(kothStates, executor);
     }
 
     /// <summary>
@@ -54,7 +37,7 @@ public partial class Routing
     /// <param name="message">Agent message</param>
     public async Task PostMessage(AgentMessage message)
     {
-        await CollectorStream.WriteItemAsync(message);
+        await _routingAdapter.CollectorStream.WriteItemAsync(message);
     }
     
     /// <summary>
@@ -66,36 +49,30 @@ public partial class Routing
     {
         // NOTE: Can benefit from locking
         var key = $"{chainId}";
-        var (currentCallsStreamName, currentRoutedOutput) = await _context.CurrentState.GetOrDefaultAsync<(string, PerperStream?)>(key);
+        var (currentCallsStreamName, currentRoutedOutput) = await _routingAdapter.GetPublicationStream(key);
         if (currentCallsStreamName != "" && currentRoutedOutput != null)
         {
             return (currentCallsStreamName, currentRoutedOutput);
         }
 
         var chain = await _hashResolver.RetrieveAsync(chainId);
+        var callsStream = await  _routingAdapter.StartCallsStream(); // for IAsyncEnumerable<AgentMessage>
+        var publicationsStream = await _routingAdapter.StartPublicationsStream(); // for IAsyncEnumerable<AgentMessage>
+        var subscriptionsStream = await _routingAdapter.StartSubscriptionsStream(); // for IAsyncEnumerable<List<AgentReference>>
 
-        var callsStream = await PerperContext.BlankStream().StartAsync(); // for IAsyncEnumerable<AgentMessage>
-        var publicationsStream = await PerperContext.BlankStream().StartAsync(); // for IAsyncEnumerable<AgentMessage>
-        var subscriptionsStream = await PerperContext.BlankStream().StartAsync(); // for IAsyncEnumerable<List<AgentReference>>
-
-        var (kothStates, executor, _) = await _context.CurrentState.GetOrDefaultAsync<(PerperStream, PerperAgent, PerperStream)>("input");
-
-        var routedInput = await _context.CurrentAgent.CallAsync<PerperStream>("RouterInput", callsStream, subscriptionsStream, subscriptionsStream);
-
-        var (_, consensusOutput) = await PerperContext.StartAgentAsync<PerperStream>(
-            chain.ConsensusType, // name of consensus
+        var (kothStates, executor, _) = await _routingAdapter.GetInput();
+        var routedInput = await _routingAdapter.RouterInput(callsStream, subscriptionsStream);
+        var consensusOutput = await _routingAdapter.StartConsensusAgent(chain.ConsensusType, // name of consensus
             routedInput,
             subscriptionsStream.Stream,
             chain,
             kothStates,
-            executor
-        );
+            executor);
 
-        var task = _context.CurrentAgent.CallAsync("RouterOutput", publicationsStream.Stream, consensusOutput, chainId)
-            .ContinueWith(x => Console.WriteLine(x.Exception), TaskContinuationOptions.OnlyOnFaulted); // DEBUG: FakeStream does not log errors
-
+        var _ = _routingAdapter.RouterOutput(publicationsStream.Stream, consensusOutput, chainId);
+        
         var resultValue = (callsStream.Stream, publicationsStream);
-        await _context.CurrentState.SetAsync(key, resultValue);
+        await _routingAdapter.SetPublicationStream(key, callsStream.Stream, publicationsStream);
         return resultValue;
     }
 }
