@@ -6,7 +6,7 @@ Consensus Network for Autonomous Agents (blockchain part)
 
 [![Discord](https://img.shields.io/badge/DISCORD-COMMUNITY-informational?style=for-the-badge&logo=discord)](https://discord.gg/C4e37Xhvt4)
 
-Note: This repository was recently moved here from https://github.com/comrade-coop/apocryph, and parts of the documentation/code might still refer to the old location.
+**NOTE**: This repository was recently moved here from https://github.com/comrade-coop/apocryph, and parts of the documentation/code might still refer to the old location. Use `git remote set-url origin git://github.com/comrade-coop/apocryph-chain` (or `git remote set-url origin git@github.com:comrade-coop/apocryph-chain.git`) to update your local clone/s to point to the right repository.
 
 ## Table of Contents
 
